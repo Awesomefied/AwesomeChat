@@ -199,7 +199,7 @@ function setTitle(id, title) {
     document.getElementById("name" + id).title = chats[id].title;
 }
 
-function addChat(id, selected) {
+function addChat(id, selected, dateId) {
     var cdiv = document.createElement("div");
     cdiv.className = "chatselect";
     cdiv.id = "chat" + id;
@@ -224,7 +224,14 @@ function addChat(id, selected) {
         cinfodiv.appendChild(newdiv);
     }
     cdiv.appendChild(cinfodiv);
-    sidebar.appendChild(cdiv);
+    if (dateId) {
+        document.getElementById(dateId).appendChild(cdiv);
+    } else {
+        if (chatdatetoday.style.display == "none") {
+            chatdatetoday.style.display = "";
+        }
+        chatstoday.appendChild(cdiv);
+    }
 }
 
 var chatIndex = -1;
@@ -254,7 +261,7 @@ async function send() {
     generating = activeChat;
     chatIndex++;
     newchatmsg.style.display = "none";
-
+    // User message
     var userdiv = document.createElement("div");
     userdiv.className = "userchat";
     userdiv.id = "user" + activeChat + "_" + chatIndex;
@@ -309,6 +316,27 @@ async function send() {
     sendbttn.style.display = "none";
     stopbttn.style.display = "";
     chatarea.appendChild(userdiv);
+    // User info under user message
+    var chatinfodiv = document.createElement("div");
+    chatinfodiv.className = "chatinfo";
+    chatinfodiv.id = "userinfo" + activeChat + "_" + chatIndex;
+    chatinfodiv.style.justifyContent = "end";
+    var copydiv = document.createElement("div");
+    copydiv.appendChild(createCopySvg());
+    copydiv.setAttribute(
+        "onclick",
+        `copyChat(${activeChat + ", " + (chats[activeChat].messages.length - 1)})`,
+    );
+    chatinfodiv.appendChild(copydiv);
+    var editdiv = document.createElement("div");
+    editdiv.appendChild(createEditSvg());
+    editdiv.setAttribute(
+        "onclick",
+        `console.log(${activeChat + ", " + (chats[activeChat].messages.length - 1)})`,
+    );
+    chatinfodiv.appendChild(editdiv);
+    chatarea.appendChild(chatinfodiv);
+    // Chat message
     var aidiv = document.createElement("div");
     aidiv.className = "aichat";
     aidiv.id = "ai" + activeChat + "_" + chatIndex;
@@ -329,7 +357,7 @@ async function send() {
         `showChangeModel(${activeChat + ", " + chats[activeChat].messages.length})`,
     );
     infodiv.appendChild(mnamediv);
-    var copydiv = document.createElement("div");
+    copydiv = document.createElement("div");
     copydiv.appendChild(createCopySvg());
     copydiv.setAttribute(
         "onclick",
@@ -344,6 +372,7 @@ async function send() {
     );
     infodiv.appendChild(redodiv);
     chatarea.appendChild(infodiv);
+
     chatarea.scrollTop = chatarea.scrollHeight - chatarea.offsetHeight;
     if (chats[activeChat].title == "") {
         await getTitle(activeChat);
@@ -380,6 +409,7 @@ async function redoChat(id, index) {
         document.getElementById("user" + activeChat + "_" + i).remove();
         document.getElementById("ai" + activeChat + "_" + i).remove();
         document.getElementById("info" + activeChat + "_" + i).remove();
+        document.getElementById("userinfo" + activeChat + "_" + i).remove();
         chatIndex--;
     }
     chats[id].messages = chats[id].messages.slice(0, index);
@@ -613,6 +643,7 @@ function newChat() {
             document.getElementById("user" + activeChat + "_" + i).remove();
             document.getElementById("ai" + activeChat + "_" + i).remove();
             document.getElementById("info" + activeChat + "_" + i).remove();
+            document.getElementById("userinfo" + activeChat + "_" + i).remove();
         }
     }
     chatIndex = -1;
@@ -733,6 +764,37 @@ function createRedoSvg() {
     return svg;
 }
 
+function createEditSvg() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "-5.9333 -2.2291 6.662 6.662");
+    svg.setAttribute("style", "width: 15px; height: 15px;");
+
+    const path1 = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+    );
+    path1.setAttribute(
+        "d",
+        "M-.0607-.0251A1 1 45 00-1.4749-1.4393L-5.0104 2.0962C-5.7175 4.2175-5.7175 4.2175-3.5962 3.5104L-.0607-.0251",
+    );
+    path1.setAttribute("stroke", "var(--c6)");
+    path1.setAttribute("stroke-width", "0.5");
+    path1.setAttribute("fill", "none");
+    svg.appendChild(path1);
+
+    const path2 = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "path",
+    );
+    path2.setAttribute("d", "M-1.4749-1.4393-.0607-.0251");
+    path2.setAttribute("stroke", "var(--c6)");
+    path2.setAttribute("stroke-width", "0.5");
+    path2.setAttribute("fill", "none");
+    svg.appendChild(path2);
+
+    return svg;
+}
+
 function selectChat(id) {
     if (activeChat == id) {
         return;
@@ -745,6 +807,7 @@ function selectChat(id) {
             document.getElementById("user" + activeChat + "_" + i).remove();
             document.getElementById("ai" + activeChat + "_" + i).remove();
             document.getElementById("info" + activeChat + "_" + i).remove();
+            document.getElementById("userinfo" + activeChat + "_" + i).remove();
         }
     }
     activeChat = id;
@@ -815,15 +878,15 @@ function selectChat(id) {
         }
         chatarea.appendChild(div);
         // Chat info
-        if (i % 2 == 0) {
-            var infodiv = document.createElement("div");
-            infodiv.className = "chatinfo";
+        var infodiv = document.createElement("div");
+        infodiv.className = "chatinfo";
+        if (i % 2 != 0) {
             infodiv.id = "info" + activeChat + "_" + index;
             var mnamediv = document.createElement("div");
             mnamediv.innerText = chats[id].modelList[index];
             mnamediv.setAttribute(
                 "onclick",
-                `showChangeModel(${activeChat + ", " + (i + 1)})`,
+                `showChangeModel(${activeChat + ", " + i})`,
             );
             mnamediv.className = "modelchange";
             infodiv.appendChild(mnamediv);
@@ -831,16 +894,33 @@ function selectChat(id) {
             copydiv.appendChild(createCopySvg());
             copydiv.setAttribute(
                 "onclick",
-                `copyChat(${activeChat + ", " + (i + 1)})`,
+                `copyChat(${activeChat + ", " + i})`,
             );
             infodiv.appendChild(copydiv);
             var redodiv = document.createElement("div");
             redodiv.appendChild(createRedoSvg());
             redodiv.setAttribute(
                 "onclick",
-                `redoChat(${activeChat + ", " + (i + 1)})`,
+                `redoChat(${activeChat + ", " + i})`,
             );
             infodiv.appendChild(redodiv);
+        } else {
+            infodiv.id = "userinfo" + activeChat + "_" + index;
+            infodiv.style.justifyContent = "end";
+            var copydiv = document.createElement("div");
+            copydiv.appendChild(createCopySvg());
+            copydiv.setAttribute(
+                "onclick",
+                `copyChat(${activeChat + ", " + i})`,
+            );
+            infodiv.appendChild(copydiv);
+            var editdiv = document.createElement("div");
+            editdiv.appendChild(createEditSvg());
+            editdiv.setAttribute(
+                "onclick",
+                `console.log(${activeChat + ", " + i})`,
+            );
+            infodiv.appendChild(editdiv);
         }
         chatarea.appendChild(infodiv);
     }
@@ -1209,11 +1289,103 @@ async function getChats() {
     }
 }
 
+function newChatDate(text, id) {
+    if (document.getElementById("chatdate" + id)) {
+        return;
+    }
+    const dateDiv = document.createElement("div");
+    dateDiv.className = "date";
+    dateDiv.innerText = text;
+    dateDiv.id = "chatdate" + id;
+    sidebar.appendChild(dateDiv);
+    const chatsDiv = document.createElement("div");
+    chatsDiv.id = "chats" + id;
+    sidebar.appendChild(chatsDiv);
+}
+
 async function start() {
+    const days = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ];
+    const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ];
+    const now = new Date();
     chats = await getChats();
-    for (let i = 0; i < Object.keys(chats).length; i++) {
-        var id = Object.keys(chats)[i];
-        addChat(id, false);
+    const chatIds = Object.keys(chats).sort().reverse();
+    for (let i = 0; i < chatIds.length; i++) {
+        var chatDate = new Date(parseInt(chatIds[i]));
+        if (
+            chatDate.getFullYear() == now.getFullYear() &&
+            chatDate.getMonth() == now.getMonth() &&
+            chatDate.getDate() == now.getDate()
+        ) {
+            // Today
+            addChat(chatIds[i], false);
+        } else if (
+            chatDate.getFullYear() == now.getFullYear() &&
+            now.getTime() - chatDate.getTime() <= 86400000
+        ) {
+            // Yesterday
+            newChatDate("Yesterday:", "yesterday");
+            addChat(chatIds[i], false, "chatsyesterday");
+        } else if (
+            chatDate.getFullYear() == now.getFullYear() &&
+            now.getTime() - chatDate.getTime() <= 604800000
+        ) {
+            // Last 7 days
+            newChatDate("Last 7 Days:", "last7days");
+            addChat(chatIds[i], false, "chatslast7days");
+        } else if (
+            chatDate.getFullYear() == now.getFullYear() &&
+            chatDate.getMonth() == now.getMonth()
+        ) {
+            // This month
+            newChatDate("This Month:", "thismonth");
+            addChat(chatIds[i], false, "chatsthismonth");
+        } else if (chatDate.getFullYear() == now.getFullYear()) {
+            // This year
+            newChatDate(
+                months[chatDate.getMonth()] + ":",
+                months[chatDate.getMonth()].toLowerCase(),
+            );
+            addChat(
+                chatIds[i],
+                false,
+                "chats" + months[chatDate.getMonth()].toLowerCase(),
+            );
+        } else {
+            // More than a year ago
+            newChatDate(
+                `${months[chatDate.getMonth()]} ${chatDate.getFullYear()}:`,
+                months[chatDate.getMonth()].toLowerCase() +
+                    chatDate.getFullYear(),
+            );
+            addChat(
+                chatIds[i],
+                false,
+                "chats" +
+                    months[chatDate.getMonth()].toLowerCase() +
+                    chatDate.getFullYear(),
+            );
+        }
     }
     models = await getModels();
     for (let i = 0; i < Object.keys(models).length; i++) {
