@@ -52,6 +52,7 @@ window.addEventListener("paste", async (event) => {
 });
 
 function format(text) {
+    // Temporary, should make own parser?
     return marked.parse(text.replaceAll("</think>", "\n</think>"));
 }
 
@@ -71,6 +72,7 @@ async function generate(model, id, current) {
                 // for thinking models only!
             }),
         });
+        // idk if this first if statment is needed
         let data;
         if (response.bodyUsed && stopGen != true) {
             data = await response.text();
@@ -105,6 +107,7 @@ async function generate(model, id, current) {
                     var decoded = new TextDecoder().decode(chunk.value);
                     decoded = decoded.trim().split("\n");
 
+                    // This is here because sometimes multiple chunks are sent at once
                     for (let i = 0; i < decoded.length; i++) {
                         chats[current].messages[
                             chats[current].messages.length - 1
@@ -112,6 +115,8 @@ async function generate(model, id, current) {
                     }
 
                     if (document.getElementById(id)) {
+                        // innerHTML bad!! need to make parser that can dynamically add new elements + use innerText instead
+                        // Mostly so that you can highlight items while chat is generating (currently not working D:)
                         document.getElementById(id).innerHTML = format(
                             chats[current].messages[
                                 chats[current].messages.length - 1
@@ -129,17 +134,17 @@ async function generate(model, id, current) {
             }
         }
         document.getElementById("name" + current).className = "chatselecttext";
+        // Change if statment cause model could just say "Loading model...", rare but possible
         if (
             document.getElementById(id) &&
             document.getElementById(id).innerText == "Loading model..."
         ) {
             document.getElementById(id).innerText = "";
         }
-        console.log("poop");
         saveChat(current);
         stopGen = false;
         generating = false;
-        // Process the data once it's fully received
+        // Process the data once it's fully received (I think that I can remove this but idk)
         if (data) {
             const splitData = data.split("}");
             for (let i = 0; i < splitData.length - 1; i++) {
@@ -149,6 +154,7 @@ async function generate(model, id, current) {
                     chats[current].messages.length - 1
                 ].content += dataJson.response;
                 if (document.getElementById(id)) {
+                    // innerHTML bad here too!!!
                     document.getElementById(id).innerHTML += format(message);
                 }
             }
@@ -167,6 +173,7 @@ async function getTitle(id) {
         await fetch("http://localhost:11434/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            // Change this to a system prompt
             body: JSON.stringify({
                 model: titleModel,
                 prompt: `Condense the user's input to a maximum of 10 words.
@@ -332,7 +339,7 @@ async function send() {
     editdiv.appendChild(createEditSvg());
     editdiv.setAttribute(
         "onclick",
-        `console.log(${activeChat + ", " + (chats[activeChat].messages.length - 1)})`,
+        `editUserText(${activeChat + ", " + (chats[activeChat].messages.length - 1)})`,
     );
     chatinfodiv.appendChild(editdiv);
     chatarea.appendChild(chatinfodiv);
@@ -630,7 +637,7 @@ function formatBites(num) {
     } else if (num > 1000) {
         return Math.round(num / 1000) + "KB";
     } else {
-        return num + "Bites";
+        return num + " Bites";
     }
 }
 
@@ -918,7 +925,7 @@ function selectChat(id) {
             editdiv.appendChild(createEditSvg());
             editdiv.setAttribute(
                 "onclick",
-                `console.log(${activeChat + ", " + i})`,
+                `editUserText(${activeChat + ", " + i})`,
             );
             infodiv.appendChild(editdiv);
         }
@@ -996,7 +1003,7 @@ function chatScroll() {
                     .slice(0, -1),
             ) -
                 1) /
-            2; // This is cursed and I probably should change it
+            2; // This is cursed and I probably should change it?
         modelchangelist.style.top =
             document.getElementsByClassName("modelchange")[i].offsetTop -
             modelchangelist.offsetHeight -
@@ -1023,6 +1030,55 @@ function renameChat(id) {
     reinput.value = chats[id].title;
     document.getElementById("name" + id).appendChild(reinput);
     renameinput.focus();
+}
+
+function cancelUserEdit() {
+    if (!document.getElementById("editmessage")) {
+        return;
+    }
+    const id = parseInt(editmessage.parentNode.id.slice(4));
+    const index = parseInt(editmessage.parentNode.id.split("_").pop()) * 2;
+    editmessage.parentNode.style = "";
+    editmessage.parentNode.innerText = chats[id].messages[index].content;
+}
+
+function sendUserEdit() {
+    if (!document.getElementById("editmessage")) {
+        return;
+    }
+    const id = parseInt(editmessage.parentNode.id.slice(4));
+    const index = parseInt(editmessage.parentNode.id.split("_").pop()) * 2;
+    editmessage.parentNode.style = "";
+    chats[id].messages[index].content = editmessage.value;
+    editmessage.parentNode.innerText = editmessage.value;
+    redoChat(id, index + 1);
+}
+
+function editUserText(id, index) {
+    if (document.getElementById("editmessage")) {
+        cancelUserEdit();
+    }
+    const userMessage = document.getElementById("user" + id + "_" + index / 2);
+    userMessage.style.minWidth = userMessage.offsetWidth - 20 + "px";
+    userMessage.style.minHeight = 37 + userMessage.offsetHeight + "px";
+    userMessage.innerText = "";
+    const messageInput = document.createElement("textarea");
+    messageInput.id = "editmessage";
+    messageInput.value = chats[id].messages[index].content;
+    userMessage.appendChild(messageInput);
+    const messageOptions = document.createElement("div");
+    messageOptions.className = "editoptions";
+    const cancelBttn = document.createElement("div");
+    cancelBttn.innerText = "Cancel";
+    cancelBttn.style.backgroundColor = "var(--c8)";
+    cancelBttn.setAttribute("onclick", "cancelUserEdit()");
+    messageOptions.appendChild(cancelBttn);
+    // Add onclick
+    const sendBttn = document.createElement("div");
+    sendBttn.innerText = "Send";
+    sendBttn.setAttribute("onclick", "sendUserEdit()");
+    messageOptions.appendChild(sendBttn);
+    userMessage.appendChild(messageOptions);
 }
 
 function changeChatTitle() {

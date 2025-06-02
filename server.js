@@ -1,6 +1,5 @@
 const express = require("express");
 const fs = require("fs");
-const unlinkSync = require("node:fs");
 const app = express();
 const port = 3000;
 const index = fs.readFileSync("./index.html", "utf8");

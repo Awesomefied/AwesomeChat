@@ -538,3 +538,31 @@ think {
     transform: rotate(45deg);
     width: 18px;
 }
+#editmessage {
+    color: var(--c6);
+    font-family: "Lucida Console", monospace;
+    font-size: 14px;
+    border: none;
+    overflow: auto;
+    outline: none;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    resize: none;
+    width: 100%;
+    height: calc(100% - 41px);
+    background: none;
+}
+.editoptions {
+    display: flex;
+    width: 100%;
+    justify-content: end;
+}
+.editoptions > div {
+    padding: 5px;
+    background-color: var(--c1);
+    border-radius: 5px;
+    margin-left: 5px;
+    margin-top: 10px;
+    cursor: pointer;
+}
