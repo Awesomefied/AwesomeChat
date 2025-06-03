@@ -32,7 +32,10 @@ To run AwesomeChat:
 
 1. Clone the repository
 
-`git clone https://github.com/Awesomefied/AwesomeChat`
+```
+git clone https://github.com/Awesomefied/AwesomeChat
+cd AwesomeChat
+```
 
 2. Ensure Ollama is running on your system
 
