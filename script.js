@@ -1073,7 +1073,6 @@ function editUserText(id, index) {
     cancelBttn.style.backgroundColor = "var(--c8)";
     cancelBttn.setAttribute("onclick", "cancelUserEdit()");
     messageOptions.appendChild(cancelBttn);
-    // Add onclick
     const sendBttn = document.createElement("div");
     sendBttn.innerText = "Send";
     sendBttn.setAttribute("onclick", "sendUserEdit()");
