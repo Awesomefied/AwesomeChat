@@ -34,7 +34,9 @@ To run AwesomeChat:
 
 `git clone https://github.com/Awesomefied/AwesomeChat`
 
-2. Ensure Ollama is running on your system (e.g., `ollama list`)
+2. Ensure Ollama is running on your system
+
+`ollama list`
 
 3. Install [Express.js](https://expressjs.com/)
 
