@@ -23,7 +23,79 @@
     </head>
     <body>
         <div id="errorsdiv"></div>
-        <div id="settingsbg" style="display: none">
+        <div id="updatebg" class="background" style="display: none">
+            <div id="updatediv">
+                <div id="updatecomplete" style="display: none">
+                    Update complete, restart AwesomeChat for changes to apply.
+                </div>
+                <div id="updateloadingdiv" style="display: none">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="-6 -6 12 12"
+                    >
+                        <path
+                            d="M-1-5A1 1 0 001-5 1 1 0 00-1-5"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M1.634-4.8301A1 1 30 003.366-3.8301 1 1 30 001.634-4.8301"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M3.8301-3.366A1 1 60 004.8301-1.634 1 1 60 003.8301-3.366"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M5-1A1 1 90 005 1 1 1 90 005-1"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M4.8301 1.634A1 1 120 003.8301 3.366 1 1 120 004.8301 1.634"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M3.366 3.8301A1 1 150 001.634 4.8301 1 1 150 003.366 3.8301"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M1 5A1 1 180 00-1 5 1 1 180 001 5"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M-1.634 4.8301A1 1 210 00-3.366 3.8301 1 1 210 00-1.634 4.8301"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M-3.8301 3.366A1 1 240 00-4.8301 1.634 1 1 240 00-3.8301 3.366"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M-5 1A1 1 270 00-5-1 1 1 270 00-5 1"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M-4.8301-1.634A1 1 300 00-3.8301-3.366 1 1 300 00-4.8301-1.634"
+                            fill="var(--c6)"
+                        ></path>
+                        <path
+                            d="M-3.366-3.8301A1 1 330 00-1.634-4.8301 1 1 330 00-3.366-3.8301"
+                            fill="var(--c6)"
+                        ></path>
+                    </svg>
+                    <div>Downloading update...</div>
+                </div>
+                <div id="updatestart">
+                    <div style="padding: 10px">
+                        An update is available, would you like to update?
+                    </div>
+                    <div id="updatebttndiv">
+                        <div onclick="startUpdate()">Yes</div>
+                        <div onclick="updatebg.style.display = 'none'">No</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="settingsbg" class="background" style="display: none">
             <div id="settingsdiv">
                 <div id="settingsbar">
                     <div>Chats</div>

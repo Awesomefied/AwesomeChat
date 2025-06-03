@@ -423,7 +423,7 @@ think {
     background: none;
     height: 16px;
 }
-#settingsbg {
+.background {
     position: absolute;
     width: 100%;
     height: 100%;
@@ -564,5 +564,47 @@ think {
     border-radius: 5px;
     margin-left: 5px;
     margin-top: 10px;
+    cursor: pointer;
+}
+#updatediv {
+    z-index: 3;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    background-color: var(--c1);
+    border-radius: 10px;
+    box-shadow: 0px 0px 10px var(--c5);
+    padding: 10px;
+    margin: 10px;
+}
+#updateloadingdiv {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-bottom: 10px;
+}
+#updateloadingdiv > svg {
+    width: 30px;
+    padding: 10px;
+    animation: rotate 2s linear infinite;
+}
+@keyframes rotate {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+#updatebttndiv {
+    display: flex;
+    justify-content: center;
+}
+#updatebttndiv > div {
+    padding: 5px;
+    background-color: var(--c4);
+    border-radius: 5px;
+    margin: 5px;
     cursor: pointer;
 }

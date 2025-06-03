@@ -1358,16 +1358,26 @@ function newChatDate(text, id) {
     sidebar.appendChild(chatsDiv);
 }
 
+async function startUpdate() {
+    updatestart.style.display = "none";
+    updateloadingdiv.style.display = "";
+    const response = await fetch("./api/update");
+    const json = await response.json();
+    if (json == true) {
+        updateloadingdiv.style.display = "none";
+        updatecomplete.style.display = "";
+    }
+}
+
+async function checkUpdate() {
+    const response = await fetch("./api/updatecheck");
+    const json = await response.json();
+    if (json == true) {
+        updatebg.style.display = "";
+    }
+}
+
 async function start() {
-    const days = [
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "friday",
-        "saturday",
-        "sunday",
-    ];
     const months = [
         "January",
         "February",
@@ -1520,5 +1530,6 @@ async function start() {
     mainchat.addEventListener("drop", changeBack, false);
     fileselect.addEventListener("change", uploadFiles);
     textbox.focus();
+    await checkUpdate();
 }
 start();
