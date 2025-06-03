@@ -159,5 +159,5 @@ app.get("/api/update", async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`ollamafied running on http://127.0.0.1:${port}`);
+    console.log(`AwesomeChat running on http://127.0.0.1:${port}`);
 });
