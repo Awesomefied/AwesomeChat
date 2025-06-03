@@ -155,7 +155,7 @@ app.get("/api/update", async (req, res) => {
     await checkUpdates("", true);
     res.send(true);
     console.log("Update complete, shutting down now.");
-    return;
+    process.exit();
 });
 
 app.listen(port, () => {
