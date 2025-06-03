@@ -1361,19 +1361,30 @@ function newChatDate(text, id) {
 async function startUpdate() {
     updatestart.style.display = "none";
     updateloadingdiv.style.display = "";
-    const response = await fetch("./api/update");
-    const json = await response.json();
-    if (json == true) {
-        updateloadingdiv.style.display = "none";
-        updatecomplete.style.display = "";
+    try {
+        const response = await fetch("./api/update");
+        const json = await response.json();
+        if (json == true) {
+            updateloadingdiv.style.display = "none";
+            updatecomplete.style.display = "";
+        }
+    } catch (error) {
+        updatebg.style.display = "none";
+        newError("Update Error: " + error.message);
+        console.error(error.message);
     }
 }
 
 async function checkUpdate() {
-    const response = await fetch("./api/updatecheck");
-    const json = await response.json();
-    if (json == true) {
-        updatebg.style.display = "";
+    try {
+        const response = await fetch("./api/updatecheck");
+        const json = await response.json();
+        if (json == true) {
+            updatebg.style.display = "";
+        }
+    } catch (error) {
+        newError("Update Check Error: " + error.message);
+        console.error(error.message);
     }
 }
 
