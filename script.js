@@ -1019,7 +1019,7 @@ async function removeChat(id) {
     }
     document.getElementById("chat" + id).remove();
     delete chats[id];
-    await deleteChat(id);
+    await deleteChat(id); // Check if returns true first
 }
 
 function renameChat(id) {
@@ -1322,6 +1322,7 @@ async function deleteChat(id) {
             },
             body: JSON.stringify(id),
         });
+        // Check if response is false to show error
     } catch (error) {
         newError("Error Deleting Chat: " + error.message);
         console.error(error.message);

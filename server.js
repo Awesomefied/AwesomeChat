@@ -3,6 +3,7 @@ const fs = require("fs");
 const app = express();
 const port = 3000;
 const index = fs.readFileSync("./index.html", "utf8");
+var settings;
 var html = "<!DOCTYPE html><html><head></head><body></body></html>";
 
 function makeFolder(path) {
@@ -74,26 +75,52 @@ async function checkUpdates(path, download) {
     if (!path) {
         path = "";
     }
-    const response = await fetch(
-        "https://api.github.com/repos/Awesomefied/AwesomeChat/contents/" + path,
-    );
-    const json = await response.json();
-    for (let i = 0; i < json.length; i++) {
-        if (json[i].type == "file") {
-            const isUpdated = await checkFile("./" + json[i].path, json[i].sha);
-            if (!isUpdated && download) {
-                await updateFile("./" + json[i].path, json[i].download_url);
-            } else if (!isUpdated) {
-                return true;
+    try {
+        const response = await fetch(
+            "https://api.github.com/repos/Awesomefied/AwesomeChat/contents/" +
+                path,
+        );
+        const json = await response.json();
+        for (let i = 0; i < json.length; i++) {
+            if (json[i].type == "file") {
+                const isUpdated = await checkFile(
+                    "./" + json[i].path,
+                    json[i].sha,
+                );
+                if (!isUpdated && download) {
+                    await updateFile("./" + json[i].path, json[i].download_url);
+                } else if (!isUpdated) {
+                    return true;
+                }
+            } else if (json[i].type == "dir") {
+                await checkUpdates(json[i].path, download);
             }
-        } else if (json[i].type == "dir") {
-            await checkUpdates(json[i].path, download);
         }
+    } catch (err) {
+        console.error(err);
+        return false; // Change this to display error
     }
     return false;
 }
 
 makeFolder("./chats");
+
+if (fs.existsSync(`./settings.json`)) {
+    settings = JSON.parse(fs.readFileSync("./settings.json", "utf8"));
+}
+/*
+ else {
+    settings = {
+        chatPort: 3000,
+        ollamaURL: "http://localhost:11434",
+        checkUpdates: true,
+        themes: {},
+        currentTheme: "auto",
+    };
+    writeFile("./settings.json", JSON.stringify(settings));
+}
+// I need to finalize settings options before writing to file
+*/
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb" }));
@@ -114,12 +141,18 @@ app.post("/api/savechats", (req, res) => {
 });
 
 app.post("/api/deletechats", (req, res) => {
-    var ids = req.body;
-    for (let i = 0; i < ids.length; i++) {
-        if (fs.existsSync(`./chats/${ids[i]}.json`)) {
-            fs.unlinkSync(`./chats/${ids[i]}.json`);
-            console.log(`Deleting ./chats/${ids[i]}.json`);
+    try {
+        var ids = req.body;
+        for (let i = 0; i < ids.length; i++) {
+            if (fs.existsSync(`./chats/${ids[i]}.json`)) {
+                fs.unlinkSync(`./chats/${ids[i]}.json`);
+                console.log(`Deleting ./chats/${ids[i]}.json`);
+            }
         }
+        res.send(true);
+    } catch (err) {
+        console.error(err);
+        res.send(false);
     }
 });
 
@@ -156,6 +189,23 @@ app.get("/api/update", async (req, res) => {
     res.send(true);
     console.log("Update complete, shutting down now.");
     process.exit();
+});
+
+app.get("/api/getsettings", async (req, res) => {
+    res.send(JSON.stringify(settings));
+});
+
+app.post("/api/changesettings", (req, res) => {
+    try {
+        if (JSON.parse(req.body)) {
+            settings = JSON.parse(req.body);
+            res.send(true);
+        }
+        res.send(false);
+    } catch (err) {
+        console.error(err);
+        res.send(false);
+    }
 });
 
 app.listen(port, () => {
