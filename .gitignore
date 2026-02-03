@@ -140,3 +140,6 @@ dist
 
 # Auto generated files
 /chats/*
+
+# User settings
+settings.json

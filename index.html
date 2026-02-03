@@ -7,6 +7,9 @@
             content="width=device-width, initial-scale=1.0, maximum-scale=1"
         />
         <link rel="icon" href="icon.svg" type="image/x-icon" />
+        <link rel="shortcut icon" href="./icon-192x192.png" />
+        <link rel="apple-touch-icon" href="./icon-192x192.png" />
+        <link rel="manifest" href="./manifest.json" />
         <style id="theme">
             :root {
                 --c1: #fff;
@@ -17,6 +20,17 @@
                 --c6: #000;
                 --c7: #90cbff;
                 --c8: #f00;
+            }
+        </style>
+        <style id="buildertheme">
+            :root {
+                --bc1: #000;
+                --bc2: #000;
+                --bc3: #000;
+                --bc4: #000;
+                --bc5: #000;
+                --bc6: #000;
+                --bc7: #000;
             }
         </style>
         <link rel="stylesheet" href="./stylesheet.css" />
@@ -98,10 +112,16 @@
         <div id="settingsbg" class="background" style="display: none">
             <div id="settingsdiv">
                 <div id="settingsbar">
+                    <div>General</div>
+                    <div>Themes</div>
                     <div>Chats</div>
                     <div>Models</div>
-                    <div>Themes</div>
-                    <div>Updates</div>
+                    <div
+                        id="savesettingsbttn"
+                        style="margin-top: auto; cursor: not-allowed"
+                    >
+                        Save Settings
+                    </div>
                 </div>
                 <div id="settingsmain">
                     <div
@@ -116,11 +136,205 @@
                         ></div>
                         <div></div>
                     </div>
+                    <div style="">
+                        <div style="margin: 10px"><h2>General</h2></div>
+                        <div class="settingsoption">
+                            <div>AwesomeChat Port:</div>
+                            <input
+                                id="sttngs_chatPort"
+                                oninput="settingsChange(this)"
+                                type="number"
+                                min="0"
+                                max="65535"
+                                class="settingsinput"
+                            />
+                        </div>
+                        <div class="settingsoption">
+                            <div>Ollama Port:</div>
+                            <input
+                                id="sttngs_ollamaPort"
+                                oninput="settingsChange(this)"
+                                type="number"
+                                min="0"
+                                max="65535"
+                                class="settingsinput"
+                            />
+                        </div>
+                        <div class="settingsoption">
+                            <div>Check For Updates:</div>
+                            <div
+                                id="sttngs_checkUpdates"
+                                class="togglebttn"
+                                onclick="toggleSwitch(this)"
+                                value="false"
+                            >
+                                <div></div>
+                            </div>
+                        </div>
+                        <div class="settingsoption">
+                            <div>Https (requires generating keys):</div>
+                            <div
+                                id="sttngs_https"
+                                class="togglebttn"
+                                onclick="toggleSwitch(this)"
+                                value="false"
+                            >
+                                <div></div>
+                            </div>
+                        </div>
+                        <div class="settingsoption">
+                            <div>Share AwesomeChat over local network:</div>
+                            <div
+                                id="sttngs_network"
+                                class="togglebttn"
+                                onclick="toggleSwitch(this)"
+                                value="false"
+                            >
+                                <div></div>
+                            </div>
+                        </div>
+                        <div class="settingsoption">
+                            <div>Password protected over network:</div>
+                            <div
+                                id="sttngs_password"
+                                class="togglebttn"
+                                onclick="toggleSwitch(this)"
+                                value="false"
+                            >
+                                <div></div>
+                            </div>
+                        </div>
+                        <div
+                            class="settingsoption"
+                            id="createpass"
+                            style="display: none"
+                        >
+                            <div>Create password:</div>
+                            <input type="password" class="settingsinput" />
+                        </div>
+                        <div id="changepass" style="display: none">
+                            <div class="settingsoption">
+                                <b>Change password:</b>
+                            </div>
+                            <div class="settingsoption">
+                                <div>Old password:</div>
+                                <input type="password" class="settingsinput" />
+                            </div>
+                            <div class="settingsoption">
+                                <div>New password:</div>
+                                <input type="password" class="settingsinput" />
+                            </div>
+                        </div>
+                        <div style="margin: 10px"><h2>Themes</h2></div>
+                        <div class="settingsoption">
+                            <b>Current Themes:</b>
+                        </div>
+                        <div class="settingsoption">
+                            <div>Light Mode:</div>
+                            <select
+                                id="lightmodeselect"
+                                oninput="settingsChange(this)"
+                                class="settingsinput"
+                            ></select>
+                        </div>
+                        <div class="settingsoption">
+                            <div>Dark Mode:</div>
+                            <select
+                                id="darkmodeselect"
+                                oninput="settingsChange(this)"
+                                class="settingsinput"
+                            ></select>
+                        </div>
+                        <div class="settingsoption">
+                            <b>All Themes:</b>
+                        </div>
+                        <div id="sttngs_themes"></div>
+                        <div class="settingsoption">
+                            <b>Edit/Add Theme:</b>
+                        </div>
+                        <div style="display: flex;align-items: center;">
+                            <div style="width: 100%">
+                                <div class="settingsoption">
+                                    <div>Load Theme:</div>
+                                    <select
+                                        id="themebuilderselect"
+                                        oninput="themeBuildSelect()"
+                                        class="settingsinput"
+                                    >
+                                        <option value="light">light</option>
+                                        <option value="dark">dark</option>
+                                    </select>
+                                </div>
+                                <div class="settingsoption">
+                                    <div>Theme Name:</div>
+                                    <input
+                                        id="themebuildername"
+                                        class="settingsinput"
+                                    >
+                                    </input>
+                                </div>
+                                <div class="settingsoption" id="tbc1">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(1)"></div>
+                                    <div>Color 1:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc2" onclick="colorPickSelect(2)">
+                                    <div class="settingsinput themebuildcolordiv"></div>
+                                    <div>Color 2:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc3">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(3)"></div>
+                                    <div>Color 3:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc4">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(4)"></div>
+                                    <div>Color 4:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc5">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(5)"></div>
+                                    <div>Color 5:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc6">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(6)"></div>
+                                    <div>Color 6:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption" id="tbc7">
+                                    <div class="settingsinput themebuildcolordiv" onclick="colorPickSelect(7)"></div>
+                                    <div>Color 7:</div>
+                                    <input class="settingsinput" oninput="themeBuildEdit(this)"/>
+                                </div>
+                                <div class="settingsoption">
+                                    <div style="background-color: var(--c7);padding: 10px;border-radius: 5px;cursor: pointer;">Save Theme</div>
+                                </div>
+                            </div>
+                            <div style="margin-right: 10px;width: 100%;">
+                                <div id="themebuilderprev"></div>
+                                <div id="tbcolorpicker" style="display:none;">
+                                    <div id="tbcolorpickdisp">
+                                        <div style="width: 50%;"></div>
+                                        <canvas style="width: 100%;" onclick="selectColor(event);" onmousedown="colorPickerClicked=true" ></canvas>
+                                    </div>
+                                    <div style="width: 100%;">
+                                        <div id="tbcolorpickslider" onclick="moveColorSlider(event);" onmousedown="colorSliderClicked=true" >
+                                            <div onmousedown=""></div>
+                                        </div>
+                                    </div>
+                                    <div id="tbcolorpickname" style="">Color 1</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <div id="modelchangelist" style="display: none"></div>
         <div id="chatinfodiv" style="display: none">
+            <div id="chatinfosave">Save chat</div>
             <div id="chatinforename">Rename chat</div>
             <div style="border-bottom: none; color: var(--c8)" id="chatinfodel">
                 Delete chat
@@ -167,6 +381,7 @@
             <div class="date" id="chatdatetoday" style="display: none">
                 Today:
             </div>
+            <div id="chatsnow"></div>
             <div id="chatstoday"></div>
         </div>
         <div id="mainchat">

@@ -1,35 +1,85 @@
 var models;
 var titleModel;
 var activeModel;
+var ollamaURL = "./ollama";
 var chats = {};
 var files = { text: {}, images: {} };
 var activeChat = 0;
 var temp = "";
 var generating = false;
 var openChat = true;
-
-var themes = {
-    light: ["#fff", "#eee", "#cdcdcd", "#b8b8b8", "#000", "#90cbff", "#f00"],
-    dark: [
-        "#000",
-        "#1d1d1d",
-        "#323232",
-        "#474747",
-        "#fff",
-        "#0e7dde",
-        "#ff3d3d",
-    ],
+var currentThemes = ["light", "dark"];
+// Save settings to cache!!!
+var settings = {
+    chatPort: 3000,
+    ollamaPort: 11434,
+    checkUpdates: true,
+    https: false,
+    network: false,
+    password: false,
+    themes: {
+        light: [
+            "#fff",
+            "#eee",
+            "#cdcdcd",
+            "#b8b8b8",
+            "#000",
+            "#90cbff",
+            "#f00",
+        ],
+        dark: [
+            "#000",
+            "#1d1d1d",
+            "#323232",
+            "#474747",
+            "#fff",
+            "#0e7dde",
+            "#ff3d3d",
+        ],
+    },
 };
+
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker
+        .register("./service-worker.js")
+        .then((registration) => {
+            console.log("Service Worker registered:", registration);
+        })
+        .catch((error) => {
+            console.log("Service Worker registration failed:", error);
+        });
+}
 
 function changeTheme(t) {
     theme.innerText = `:root {--c1: ${t[0]};--c2: ${t[1]};--c3: ${t[2]}7d;--c4: ${t[2]};--c5: ${t[3]};--c6: ${t[4]};--c7: ${t[5]};--c8: ${t[6]}`;
 }
 
+function changeBuilderTheme(t) {
+    buildertheme.innerText = `:root {--bc1: ${t[0]};--bc2: ${t[1]};--bc3: ${t[2]};--bc4: ${t[3]};--bc5: ${t[4]};--bc6: ${t[5]};--bc7: ${t[6]}`;
+}
+
 function autoTheme() {
+    var id0 =
+        Object.keys(settings.themes).indexOf(currentThemes[0]) + "_themeprev";
+    var id1 =
+        Object.keys(settings.themes).indexOf(currentThemes[1]) + "_themeprev";
+
     if (window.matchMedia("(prefers-color-scheme:dark)").matches) {
-        changeTheme(themes["dark"]);
+        changeTheme(settings.themes[currentThemes[1]]);
+        if (document.getElementById(id1)) {
+            document.getElementById(id1).style.border = "solid 2px var(--c7)";
+        }
+        if (document.getElementById(id0)) {
+            document.getElementById(id0).style.border = "";
+        }
     } else {
-        changeTheme(themes["light"]);
+        changeTheme(settings.themes[currentThemes[0]]);
+        if (document.getElementById(id0)) {
+            document.getElementById(id0).style.border = "solid 2px var(--c7)";
+        }
+        if (document.getElementById(id1)) {
+            document.getElementById(id1).style.border = "";
+        }
     }
 }
 autoTheme();
@@ -53,24 +103,36 @@ window.addEventListener("paste", async (event) => {
 
 function format(text) {
     // Temporary, should make own parser?
-    return marked.parse(text.replaceAll("</think>", "\n</think>"));
+    return marked.parse(text);
 }
 
 async function generate(model, id, current) {
-    chats[current].messages.push({ role: "assistant", content: "" });
+    var bodyJSON = JSON.stringify({
+        model,
+        messages: chats[current].messages,
+    });
+    if (models[model].capabilities.indexOf("thinking") != -1) {
+        bodyJSON = JSON.stringify({
+            model,
+            messages: chats[current].messages,
+            think: true,
+        });
+        chats[current].messages.push({
+            role: "assistant",
+            content: "",
+            thinking: "",
+        });
+    } else {
+        chats[current].messages.push({ role: "assistant", content: "" });
+    }
     chats[current].modelList.push(activeModel);
     document.getElementById("name" + current).className =
         "chatselecttext loading";
     try {
-        const response = await fetch("http://localhost:11434/api/chat", {
+        const response = await fetch(ollamaURL + "/api/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                model,
-                messages: chats[current].messages,
-                //think: true,
-                // for thinking models only!
-            }),
+            body: bodyJSON,
         });
         // idk if this first if statment is needed
         let data;
@@ -109,19 +171,61 @@ async function generate(model, id, current) {
 
                     // This is here because sometimes multiple chunks are sent at once
                     for (let i = 0; i < decoded.length; i++) {
-                        chats[current].messages[
-                            chats[current].messages.length - 1
-                        ].content += JSON.parse(decoded[i]).message.content;
+                        if (JSON.parse(decoded[i]).message.thinking) {
+                            chats[current].messages[
+                                chats[current].messages.length - 1
+                            ].thinking += JSON.parse(
+                                decoded[i],
+                            ).message.thinking;
+                        } else {
+                            chats[current].messages[
+                                chats[current].messages.length - 1
+                            ].content += JSON.parse(decoded[i]).message.content;
+                        }
                     }
 
                     if (document.getElementById(id)) {
                         // innerHTML bad!! need to make parser that can dynamically add new elements + use innerText instead
                         // Mostly so that you can highlight items while chat is generating (currently not working D:)
-                        document.getElementById(id).innerHTML = format(
+                        if (
                             chats[current].messages[
                                 chats[current].messages.length - 1
-                            ].content,
-                        );
+                            ].thinking
+                        ) {
+                            /*
+                            if (!document.getElementById(`${id}_thinking`)) {
+                                var thinkDiv = document.createElement("think");
+                                thinkDiv.id = `${id}_thinking`;
+                                document
+                                    .getElementById(id)
+                                    .appendChild(thinkDiv);
+                            }
+                            document.getElementById(
+                                `${id}_thinking`,
+                            ).innerHTML = format(
+                                chats[current].messages[
+                                    chats[current].messages.length - 1
+                                ].thinking,
+                            );
+                            */
+                            document.getElementById(id).innerHTML = format(
+                                "<details open=''><summary>Thinking</summary>\n\n" +
+                                    chats[current].messages[
+                                        chats[current].messages.length - 1
+                                    ].thinking +
+                                    "\n\n</details>\n" +
+                                    chats[current].messages[
+                                        chats[current].messages.length - 1
+                                    ].content,
+                            );
+                        } else {
+                            document.getElementById(id).innerHTML = format(
+                                chats[current].messages[
+                                    chats[current].messages.length - 1
+                                ].content,
+                            );
+                        }
+
                         if (scrolledDown) {
                             chatarea.scrollTop =
                                 chatarea.scrollHeight - chatarea.offsetHeight;
@@ -170,7 +274,7 @@ async function generate(model, id, current) {
 
 async function getTitle(id) {
     try {
-        await fetch("http://localhost:11434/api/generate", {
+        await fetch(ollamaURL + "/api/generate", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             // Change this to a system prompt
@@ -237,7 +341,7 @@ function addChat(id, selected, dateId) {
         if (chatdatetoday.style.display == "none") {
             chatdatetoday.style.display = "";
         }
-        chatstoday.appendChild(cdiv);
+        chatsnow.appendChild(cdiv);
     }
 }
 
@@ -275,11 +379,14 @@ async function send() {
     var usercontent = textbox.value.trim();
     for (let i = 0; i < Object.keys(files.text).length; i++) {
         var filename = Object.keys(files.text)[i];
+        if (filename.indexOf("\\") != -1) {
+            filename = filename.split("\\")[0];
+        }
         var ext = "";
         if (filename.includes(".")) {
             ext = filename.split(".")[filename.split(".").length - 1];
         }
-        usercontent += `\n${filename}\n\`\`\`${ext}\n${files.text[filename]}\n\`\`\``;
+        usercontent += `\n${filename}\n\`\`\`${ext}\n${files.text[Object.keys(files.text)[i]]}\n\`\`\``;
         removeFile("txt", i);
     }
     usercontent = usercontent.trim();
@@ -533,6 +640,9 @@ function createFile(name, url) {
     }
     const fname = document.createElement("div");
     fname.style.paddingTop = "5px";
+    if (name.indexOf("\\") != -1) {
+        name = name.split("\\")[0];
+    }
     if (name.length > 13) {
         name = name.slice(0, 5) + "..." + name.slice(-5);
     }
@@ -548,19 +658,33 @@ function uploadFiles() {
     for (let i = 0; i < fileselect.files.length; i++) {
         const file = fileselect.files[i];
         const reader = new FileReader();
+        // If file name already in list it adds current time to name
+        var filename = file.name;
         if (
-            (!Object.keys(files.text).includes(file.name) ||
-                !files.text[file.name]) &&
-            (!Object.keys(files.images).includes(file.name) ||
-                !files.images[file.name])
+            (Object.keys(files.text).includes(file.name) &&
+                files.text[file.name]) ||
+            (Object.keys(files.images).includes(file.name) &&
+                files.images[file.name])
+        ) {
+            filename = file.name + "\\" + Date.now();
+        }
+        // Checks if file name is already in files
+        // but if a file is deleted the file name is kept (need to check why this is the case)
+        // So if a file name is already in files but no file is there it gets over written
+        // I think this if statement is not needed anymore because of the one above
+        if (
+            (!Object.keys(files.text).includes(filename) ||
+                !files.text[filename]) &&
+            (!Object.keys(files.images).includes(filename) ||
+                !files.images[filename])
         ) {
             if (file.type.split("/")[0] == "image") {
                 if (models[activeModel].capabilities.includes("vision")) {
                     reader.addEventListener(
                         "load",
                         () => {
-                            createFile(file.name, URL.createObjectURL(file));
-                            files.images[file.name] = reader.result;
+                            createFile(filename, URL.createObjectURL(file));
+                            files.images[filename] = reader.result;
                         },
                         false,
                     );
@@ -571,9 +695,9 @@ function uploadFiles() {
                 reader.addEventListener(
                     "load",
                     () => {
-                        createFile(file.name);
+                        createFile(filename);
                         let utf8decoder = new TextDecoder();
-                        files.text[file.name] = utf8decoder.decode(
+                        files.text[filename] = utf8decoder.decode(
                             reader.result,
                         );
                     },
@@ -587,7 +711,7 @@ function uploadFiles() {
 
 async function getModels() {
     try {
-        var modelrequest = await fetch("http://localhost:11434/api/tags")
+        var modelrequest = await fetch(ollamaURL + "/api/tags")
             .then((response) => response.json())
             .then((data) => {
                 var modelnames = {};
@@ -613,7 +737,7 @@ async function getModels() {
 
 async function getModelData(model) {
     try {
-        var request = await fetch("http://localhost:11434/api/show", {
+        var request = await fetch(ollamaURL + "/api/show", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ model: model }),
@@ -642,6 +766,10 @@ function formatBites(num) {
 }
 
 function newChat() {
+    history.pushState(null, "", "./");
+    if (sidebar.style.zIndex == 2 && sidebar.style.display != "none") {
+        toggleSideBar();
+    }
     if (activeChat != 0) {
         for (let i = 0; i < chats[activeChat].messages.length / 2; i++) {
             if (document.getElementById("imgs" + activeChat + "_" + i)) {
@@ -658,7 +786,9 @@ function newChat() {
     activeChat = 0;
     textbox.value = temp;
     resizeInput();
-    textbox.focus();
+    if (sidebar.style.zIndex != 2) {
+        textbox.focus();
+    }
     var allChats = document.getElementsByClassName("chatselect");
     for (let i = 1; i < allChats.length; i++) {
         allChats[i].style.backgroundColor = "";
@@ -669,6 +799,7 @@ function newChat() {
 }
 
 function newError(text) {
+    console.log(text);
     const errDiv = document.createElement("div");
     errDiv.id = "error" + errorsdiv.children.length;
     const errName = document.createElement("div");
@@ -685,6 +816,9 @@ function newError(text) {
     errClose.appendChild(document.createElement("div"));
     errDiv.appendChild(errClose);
     errorsdiv.appendChild(errDiv);
+    setTimeout(function () {
+        document.getElementById(errDiv.id).remove();
+    }, 15000);
 }
 
 function createCopySvg() {
@@ -806,6 +940,9 @@ function selectChat(id) {
     if (activeChat == id) {
         return;
     }
+    if (sidebar.style.zIndex == 2 && sidebar.style.display != "none") {
+        toggleSideBar();
+    }
     if (activeChat != 0) {
         for (let i = 0; i < chats[activeChat].messages.length / 2; i++) {
             if (document.getElementById("imgs" + activeChat + "_" + i)) {
@@ -817,10 +954,16 @@ function selectChat(id) {
             document.getElementById("userinfo" + activeChat + "_" + i).remove();
         }
     }
+    // Change URL
+    var url = new URL(window.location.href);
+    url.searchParams.set("chat", id);
+    history.pushState(null, "", url.toString());
     activeChat = id;
     textbox.value = chats[activeChat].temp;
     resizeInput();
-    textbox.focus();
+    if (sidebar.style.zIndex != 2) {
+        textbox.focus();
+    }
     const lastModel =
         chats[activeChat].modelList[chats[activeChat].modelList.length - 1];
     if (Object.keys(models).indexOf(lastModel) != -1) {
@@ -880,7 +1023,16 @@ function selectChat(id) {
                 ldiv.innerText = "Loading model...";
                 div.appendChild(ldiv);
             } else {
-                div.innerHTML = format(chat.content);
+                if (chat.thinking) {
+                    div.innerHTML = format(
+                        "<details><summary>Thinking</summary>\n\n" +
+                            chat.thinking +
+                            "\n\n</details>\n" +
+                            chat.content,
+                    );
+                } else {
+                    div.innerHTML = format(chat.content);
+                }
             }
         }
         chatarea.appendChild(div);
@@ -947,15 +1099,24 @@ function stopClick() {
 function chatInfo(id) {
     stopClick();
     changeChatTitle();
+    if (
+        chatinfodiv.style.display != "none" &&
+        parseInt(chatinfosave.attributes.onclick.nodeValue.slice(9, -1)) == id
+    ) {
+        chatinfodiv.style.display = "none";
+        return;
+    }
     if (modelselectlist.style.display == "") {
         toggleList();
     }
     var y = event.clientY + 10;
-    if (y + 74 >= document.body.offsetHeight) {
-        y = document.body.offsetHeight - 74;
+    // 112 is the computed height of the chatinfodiv element
+    if (y + 112 >= document.body.offsetHeight) {
+        y = document.body.offsetHeight - 112;
     }
     chatinfodiv.style.left = event.clientX - 10 + "px";
     chatinfodiv.style.top = y + "px";
+    chatinfosave.setAttribute("onclick", `saveChat(${id})`);
     chatinfodel.setAttribute("onclick", `removeChat(${id})`);
     chatinforename.setAttribute("onclick", `renameChat(${id})`);
     chatinfodiv.style.display = "";
@@ -1014,12 +1175,16 @@ function chatScroll() {
 
 async function removeChat(id) {
     stopChat();
+    const response = await deleteChat(id);
+    if (!response) {
+        newError(`Unable to Delete Chat (ID: ${id})`);
+        return;
+    }
     if (activeChat == id) {
         newChat();
     }
     document.getElementById("chat" + id).remove();
     delete chats[id];
-    await deleteChat(id); // Check if returns true first
 }
 
 function renameChat(id) {
@@ -1104,6 +1269,31 @@ function toggleList() {
         ddsvg.style.transform = "";
         modelselectlist.style.display = "none";
     }
+}
+
+function toggleSwitch(self) {
+    if (self.style.length != 0) {
+        self.style = "";
+        self.children[0].style = "";
+        self.setAttribute("value", "false");
+        if (self.id == "sttngs_password") {
+            changepass.style.display = "none";
+            createpass.style.display = "none";
+        }
+    } else {
+        self.style.backgroundColor = "var(--c7)";
+        self.style.border = "2px solid var(--c7)";
+        self.children[0].style.marginLeft = "20px";
+        self.setAttribute("value", "true");
+        if (self.id == "sttngs_password") {
+            if (settings.password) {
+                changepass.style.display = "";
+            } else {
+                createpass.style.display = "";
+            }
+        }
+    }
+    settingsChange(self);
 }
 
 document.addEventListener("click", function (event) {
@@ -1211,17 +1401,18 @@ function resizeInput() {
 function mobile() {
     if (
         document.body.offsetWidth < document.body.offsetHeight &&
-        sidebar.style.zIndex != "1"
+        sidebar.style.zIndex != "2"
     ) {
         if (sidebar.style.display != "none") {
             toggleSideBar();
         }
         sidebar.style.position = "absolute";
-        sidebar.style.zIndex = "1";
+        sidebar.style.left = "0";
+        sidebar.style.zIndex = "2";
         sidebar.style.boxShadow = "0px 0px 15px var(--c4)";
     } else if (
         document.body.offsetWidth >= document.body.offsetHeight &&
-        sidebar.style.zIndex == "1"
+        sidebar.style.zIndex == "2"
     ) {
         if (sidebar.style.display == "none") {
             toggleSideBar();
@@ -1315,18 +1506,20 @@ async function deleteChat(id) {
         id = [id];
     }
     try {
-        await fetch("/api/deletechats", {
+        const response = await fetch("/api/deletechats", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify(id),
         });
-        // Check if response is false to show error
+        const json = await response.json();
+        return json;
     } catch (error) {
         newError("Error Deleting Chat: " + error.message);
         console.error(error.message);
     }
+    return false;
 }
 
 async function getChats() {
@@ -1389,7 +1582,454 @@ async function checkUpdate() {
     }
 }
 
+async function getSettings() {
+    try {
+        var res = await fetch("/api/getsettings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+        const json = await res.json();
+        return json;
+    } catch (error) {
+        newError("Fetching Settings Error: " + error.message);
+        console.error(error.message);
+    }
+}
+
+function loadChatFromURL() {
+    const chatId = new URL(window.location.href).searchParams.get("chat");
+    if (chatId && chats[chatId]) {
+        selectChat(chatId);
+    }
+}
+
+function createPreviewDiv(theme) {
+    var previewdiv = document.createElement("div");
+    previewdiv.className = "sttngsthemepreview";
+    previewdiv.style.backgroundColor = theme[0];
+    previewdiv.style.color = theme[4];
+    // Create purple sidebar
+    var sidebar = document.createElement("div");
+    sidebar.style.cssText = `min-width: 59px; background-color: ${theme[1]}; text-align: center;`;
+    var h2 = document.createElement("h2");
+    h2.style.margin = "3px";
+    h2.textContent = "AwsmChat";
+    var chatList = document.createElement("div");
+    chatList.style.cssText = "font-size: 5px; line-height: 8px;";
+    for (var i = 0; i < 9; i++) {
+        var chatDiv = document.createElement("div");
+        chatDiv.style.cssText =
+            "margin: 5px;text-align: left;padding-left: 2px;";
+        chatDiv.textContent = "Untitled Chat";
+        if (i == 0) {
+            chatDiv.style.cssText += `background-color: ${theme[2]};border-radius: 2px;`;
+        }
+        chatList.appendChild(chatDiv);
+    }
+    sidebar.appendChild(h2);
+    sidebar.appendChild(chatList);
+    previewdiv.appendChild(sidebar);
+    // Create blue main content
+    var mainContent = document.createElement("div");
+    mainContent.style.cssText =
+        "height: 100%; width: 100%; display: flex; align-items: center; flex-direction: column;";
+    // Message container
+    var messageContainer = document.createElement("div");
+    messageContainer.style.cssText =
+        "height: 110px; max-width: 200px; display: flex; flex-direction: column; overflow: scroll;";
+    var exampleError = document.createElement("div");
+    exampleError.style.cssText = `width: 60px;height: 10px;background-color: ${theme[6]};margin-top: 3px;border-radius: 2px;color: ${theme[0]};text-align: center;line-height: 10px;`;
+    exampleError.textContent = "Example Error x";
+    var message1 = document.createElement("div");
+    message1.style.cssText = `padding: 3px; background-color: ${theme[5]}; margin: 3px; margin-left: 30%; border-radius: 4px;`;
+    message1.textContent =
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.";
+    var message2 = document.createElement("div");
+    message2.style.cssText = `padding: 3px; background-color: ${theme[1]}; margin: 3px; margin-right: 30%; border-radius: 4px;`;
+    message2.textContent =
+        "Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.";
+    mainContent.appendChild(exampleError);
+    messageContainer.appendChild(message1);
+    messageContainer.appendChild(message2);
+    mainContent.appendChild(messageContainer);
+    // Input container
+    var inputContainer = document.createElement("div");
+    inputContainer.style.cssText = `max-width: 200px; height: 10px; margin: 4px; border: 1px solid ${theme[3]}; border-radius: 2px; padding: 1px; display: flex; width: calc(100% - 9px);`;
+    var inputText = document.createElement("div");
+    inputText.style.cssText = "padding-left: 3px;";
+    inputText.textContent = " + Type here...";
+    inputContainer.appendChild(inputText);
+    mainContent.appendChild(inputContainer);
+    previewdiv.appendChild(mainContent);
+    return previewdiv;
+}
+
+// Create preview for theme editor
+var themeBuildVars = [];
+for (let i = 1; i < 8; i++) {
+    themeBuildVars.push(`var(--bc${i})`);
+}
+themebuilderprev.appendChild(createPreviewDiv(themeBuildVars));
+themeBuildVars = [];
+for (let i = 1; i < 8; i++) {
+    themeBuildVars.push("#000");
+    document.getElementById("tbc" + i).getElementsByTagName("input")[0].value =
+        "";
+}
+themebuildername.value = "";
+
+function themeBuildSelect() {
+    themeBuildVars = settings.themes[themebuilderselect.value].slice();
+    changeBuilderTheme(settings.themes[themebuilderselect.value]);
+    themebuildername.value = themebuilderselect.value;
+    for (let i = 0; i < 7; i++) {
+        var tbcdiv = document.getElementById("tbc" + (i + 1));
+        tbcdiv.getElementsByTagName("input")[0].value = themeBuildVars[i];
+        tbcdiv.getElementsByTagName("div")[0].style.backgroundColor =
+            themeBuildVars[i];
+    }
+}
+
+function themeBuildEdit(self) {
+    var i = parseInt(self.parentNode.id.slice(3));
+    themeBuildVars[i - 1] = self.value;
+    changeBuilderTheme(themeBuildVars);
+    self.parentNode.getElementsByTagName("div")[0].style.backgroundColor =
+        self.value;
+    colorPickSelect(i);
+}
+
+function componentToHex(c) {
+    var hex = c.toString(16);
+    return hex.length == 1 ? "0" + hex : hex;
+}
+function rgbToHex(c) {
+    return (
+        "#" + componentToHex(c[0]) + componentToHex(c[1]) + componentToHex(c[2])
+    );
+}
+
+function hexToRgb(hex) {
+    var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+    hex = hex.replace(shorthandRegex, function (m, r, g, b) {
+        return r + r + g + g + b + b;
+    });
+    var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? [
+              parseInt(result[1], 16),
+              parseInt(result[2], 16),
+              parseInt(result[3], 16),
+          ]
+        : null;
+}
+
+function colorPickSelect(i) {
+    var hexColor = themeBuildVars[i - 1];
+    tbcolorpickname.innerText = "Color " + i;
+    tbcolorpickdisp.getElementsByTagName("div")[0].style.backgroundColor =
+        hexColor;
+    colorPickDisplayCanvas(hexToRgb(hexColor));
+    if (tbcolorpicker.style.display == "none") {
+        tbcolorpicker.style.display = "";
+    }
+}
+
+function hueToPos(c) {
+    var r = c[0] / 255;
+    var g = c[1] / 255;
+    var b = c[2] / 255;
+    // Segment 0: Red is max, Blue is min -> Green is rising
+    if (r >= g && r >= b && b <= g && b <= 0.1) {
+        return (0 + g) / 6;
+    }
+    // Segment 1: Green is max, Blue is min -> Red is falling
+    if (g >= r && g >= b && b <= r && b <= 0.1) {
+        return (1 + (1 - r)) / 6;
+    }
+    // Segment 2: Green is max, Red is min -> Blue is rising
+    if (g >= b && g >= r && r <= b && r <= 0.1) {
+        return (2 + b) / 6;
+    }
+    // Segment 3: Blue is max, Red is min -> Green is falling
+    if (b >= g && b >= r && r <= g && r <= 0.1) {
+        return (3 + (1 - g)) / 6;
+    }
+    // Segment 4: Blue is max, Green is min -> Red is rising
+    if (b >= r && b >= g && g <= r && g <= 0.1) {
+        return (4 + r) / 6;
+    }
+    // Segment 5: Red is max, Green is min -> Blue is falling
+    if (r >= b && r >= g && g <= b && g <= 0.1) {
+        var res = (5 + (1 - b)) / 6;
+        return res >= 0.99 ? 1.0 : res; // Cleanly snap the very end back to 1.0
+    }
+
+    return 0;
+}
+
+function posToHue(t) {
+    var x = 1 - Math.max(0, Math.min(1, 6 * t - 1, 5 - 6 * t));
+    var y = Math.max(0, Math.min(1, 6 * t, 4 - 6 * t));
+    var z = Math.max(0, Math.min(1, 6 * t - 2, 6 - 6 * t));
+    return [Math.floor(x * 255), Math.floor(y * 255), Math.floor(z * 255)];
+}
+
+function findHue(rgb) {
+    let r = rgb[0],
+        g = rgb[1],
+        b = rgb[2];
+    let max = Math.max(r, g, b);
+    let min = Math.min(r, g, b);
+
+    // 1. Handle grayscale (no hue)
+    if (max == min) return [255, 0, 0];
+
+    // 2. Normalize: Remove the "whiteness" (min) and scale to 255
+    let chroma = max - min;
+    let hueRGB = [
+        ((r - min) / chroma) * 255,
+        ((g - min) / chroma) * 255,
+        ((b - min) / chroma) * 255,
+    ];
+
+    return hueRGB.map(Math.round);
+}
+
+function colorPickDisplayCanvas(rgb) {
+    if (tbcolorpicker.style.display == "none") {
+        tbcolorpicker.style.display = "";
+    }
+    var canvas = tbcolorpickdisp.getElementsByTagName("canvas")[0];
+    var ctx = canvas.getContext("2d");
+    var width = canvas.offsetWidth;
+    var height = canvas.offsetHeight;
+    canvas.width = width;
+    canvas.height = height;
+    var imageData = ctx.createImageData(width, height);
+    var c = findHue(rgb);
+    for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height; y++) {
+            var i = (y * width + x) * 4;
+            imageData.data[i] =
+                (1 - y / height) * (255 - ((255 - c[0]) * x) / width); // Red
+            imageData.data[i + 1] =
+                (1 - y / height) * (255 - ((255 - c[1]) * x) / width); // Green
+            imageData.data[i + 2] =
+                (1 - y / height) * (255 - ((255 - c[2]) * x) / width); // Blue
+            imageData.data[i + 3] = 255;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    var b = 0;
+    if (rgb[1] >= rgb[0] && rgb[1] >= rgb[2]) {
+        b = 1;
+    } else if (rgb[2] >= rgb[0] && rgb[2] >= rgb[1]) {
+        b = 2;
+    }
+    var yPos = height - (rgb[b] / 255) * height;
+    var b2 = 0;
+    if (c[1] == 0) {
+        b2 = 1;
+    } else if (c[2] == 0) {
+        b2 = 2;
+    }
+    var xPos = width - (rgb[b2] / rgb[b]) * width;
+    if (rgb[b] == 0) {
+        xPos = 0;
+    }
+
+    ctx.beginPath();
+    ctx.arc(xPos, yPos, 4, 0, 2 * Math.PI);
+    ctx.fillStyle = `rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "white";
+    ctx.stroke();
+
+    tbcolorpickslider.children[0].style.left = hueToPos(c) * 287 - 10 + "px";
+}
+
+function selectColor(event) {
+    const rect = tbcolorpickdisp
+        .getElementsByTagName("canvas")[0]
+        .getBoundingClientRect();
+    var x = (event.clientX - rect.left) / rect.width;
+    var y = (rect.height - (event.clientY - rect.top)) / rect.height;
+
+    if (x < 0) {
+        x = 0;
+    } else if (x > 1) {
+        x = 1;
+    }
+    if (y < 0) {
+        y = 0;
+    } else if (y > 1) {
+        y = 1;
+    }
+
+    var hexColor =
+        themeBuildVars[parseInt(tbcolorpickname.innerText.split(" ")[1]) - 1];
+    var c = findHue(hexToRgb(hexColor));
+    c = [
+        Math.round((255 + (c[0] - 255) * x) * y),
+        Math.round((255 + (c[1] - 255) * x) * y),
+        Math.round((255 + (c[2] - 255) * x) * y),
+    ];
+    //Make func for this "updateColor(color)"?
+    var inp = document
+        .getElementById("tbc" + tbcolorpickname.innerText.split(" ")[1])
+        .getElementsByTagName("input")[0];
+    inp.value = rgbToHex(c);
+    themeBuildEdit(inp);
+}
+
+function moveColorSlider(event) {
+    const rect = tbcolorpickslider.getBoundingClientRect();
+    const xPos = event.clientX - rect.left;
+    var pos = xPos - 10;
+    if (pos < -10) {
+        pos = -10;
+    } else if (pos > 277) {
+        pos = 277;
+    }
+    var t = (pos + 10) / 287;
+    var inp = document
+        .getElementById("tbc" + tbcolorpickname.innerText.split(" ")[1])
+        .getElementsByTagName("input")[0];
+    var c = hexToRgb(inp.value);
+    var h = posToHue(t);
+    var max = Math.max(c[0], c[1], c[2]);
+    var min = Math.min(c[0], c[1], c[2]);
+    var range = max - min;
+    // new = min + (hue % * rang)
+    inp.value = rgbToHex([
+        Math.round(min + (h[0] / 255) * range),
+        Math.round(min + (h[1] / 255) * range),
+        Math.round(min + (h[2] / 255) * range),
+    ]);
+    themeBuildEdit(inp);
+    tbcolorpickslider.children[0].style.left = pos + "px";
+}
+
+var colorPickerClicked = false;
+var colorSliderClicked = false;
+
+settingsbg.addEventListener("mousemove", function (event) {
+    if (colorPickerClicked) {
+        selectColor(event);
+    }
+    if (colorSliderClicked) {
+        moveColorSlider(event);
+    }
+});
+
+settingsbg.addEventListener("mouseup", function (event) {
+    colorPickerClicked = false;
+    colorSliderClicked = false;
+});
+
+function settingsChange(self) {
+    var value = self.value;
+    if (self.tagName != "INPUT" && self.tagName != "SELECT") {
+        value = self.attributes.value.value;
+    }
+    if (self.type == "number") {
+        self.value = parseInt(self.value);
+        if (self.value < 0 || !self.value) {
+            self.value = 0;
+        } else if (self.value > 65535) {
+            self.value = 65535;
+        }
+    }
+    var cSetting;
+    if (self.id == "lightmodeselect") {
+        cSetting = currentThemes[0];
+    } else if (self.id == "darkmodeselect") {
+        cSetting = currentThemes[1];
+    } else {
+        cSetting = JSON.stringify(settings[self.id.split("_")[1]]);
+    }
+    //console.log(value, cSetting);
+    if (value != cSetting) {
+        savesettingsbttn.style.cursor = "";
+        savesettingsbttn.style.backgroundColor = "var(--c7)";
+        savesettingsbttn.style.opacity = "1";
+    } else {
+        var notChanged = true;
+        // Loop through all settings to check if they are the same
+        if (notChanged) {
+            savesettingsbttn.style.cursor = "not-allowed";
+            savesettingsbttn.style.backgroundColor = "";
+            savesettingsbttn.style.opacity = "";
+        }
+    }
+}
+
+function updateSettingsMenu() {
+    var keys = Object.keys(settings);
+    for (let i = 0; i < keys.length; i++) {
+        sttng = settings[keys[i]];
+        if (sttng == true) {
+            toggleSwitch(document.getElementById("sttngs_" + keys[i]));
+        } else if (typeof sttng != "object") {
+            document.getElementById("sttngs_" + keys[i]).value = sttng;
+        }
+    }
+    sttngs_themes.innerHTML = "";
+    lightmodeselect.innerHTML = "";
+    darkmodeselect.innerHTML = "";
+    themebuilderselect.innerHTML = "";
+    var themeKeys = Object.keys(settings.themes);
+    for (let i = 0; i < themeKeys.length; i++) {
+        var ctheme = settings.themes[themeKeys[i]];
+        // Create theme preview
+        var tdiv = document.createElement("div");
+        tdiv.id = i + "_themeprev";
+        tdiv.appendChild(createPreviewDiv(ctheme));
+        var titlediv = document.createElement("div");
+        titlediv.className = "sttngsthemetitle";
+        titlediv.innerText = themeKeys[i];
+        tdiv.appendChild(titlediv);
+        sttngs_themes.appendChild(tdiv);
+        // Create options for theme dropdowns
+        var themeOption = document.createElement("option");
+        themeOption.innerText = themeKeys[i];
+        themeOption.value = themeKeys[i];
+        lightmodeselect.appendChild(themeOption);
+        themeOption = document.createElement("option");
+        themeOption.innerText = themeKeys[i];
+        themeOption.value = themeKeys[i];
+        darkmodeselect.appendChild(themeOption);
+        themeOption = document.createElement("option");
+        themeOption.innerText = themeKeys[i];
+        themeOption.value = themeKeys[i];
+        themebuilderselect.appendChild(themeOption);
+    }
+    themebuilderselect.value = "";
+    lightmodeselect.value = currentThemes[0];
+    darkmodeselect.value = currentThemes[1];
+    if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
+        document.getElementById("1_themeprev").style.border =
+            "solid 2px var(--c7)";
+    } else {
+        document.getElementById("0_themeprev").style.border =
+            "solid 2px var(--c7)";
+    }
+}
+
 async function start() {
+    settings = await getSettings();
+    if (
+        (window.location.hostname == "127.0.0.1" ||
+            window.location.hostname == "localhost") &&
+        !settings.https
+    ) {
+        ollamaURL = `http://${window.location.hostname}:${settings.ollamaPort}`;
+    }
     const months = [
         "January",
         "February",
@@ -1415,7 +2055,10 @@ async function start() {
             chatDate.getDate() == now.getDate()
         ) {
             // Today
-            addChat(chatIds[i], false);
+            addChat(chatIds[i], false, "chatstoday");
+            if (chatdatetoday.style.display == "none") {
+                chatdatetoday.style.display = "";
+            }
         } else if (
             chatDate.getFullYear() == now.getFullYear() &&
             now.getTime() - chatDate.getTime() <= 86400000
@@ -1530,7 +2173,8 @@ async function start() {
         }
     }
     titleModel = last[1];
-
+    loadChatFromURL();
+    updateSettingsMenu();
     function change() {
         fileselectscreen.style.display = "";
     }
@@ -1542,6 +2186,8 @@ async function start() {
     mainchat.addEventListener("drop", changeBack, false);
     fileselect.addEventListener("change", uploadFiles);
     textbox.focus();
-    await checkUpdate();
+    if (settings.checkUpdates) {
+        await checkUpdate();
+    }
 }
 start();

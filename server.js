@@ -1,7 +1,8 @@
+const { createProxyServer } = require("http-proxy");
 const express = require("express");
+const https = require("https");
 const fs = require("fs");
 const app = express();
-const port = 3000;
 const index = fs.readFileSync("./index.html", "utf8");
 var settings;
 var html = "<!DOCTYPE html><html><head></head><body></body></html>";
@@ -107,20 +108,43 @@ makeFolder("./chats");
 
 if (fs.existsSync(`./settings.json`)) {
     settings = JSON.parse(fs.readFileSync("./settings.json", "utf8"));
-}
-/*
- else {
+} else {
     settings = {
         chatPort: 3000,
-        ollamaURL: "http://localhost:11434",
+        ollamaPort: 11434,
         checkUpdates: true,
-        themes: {},
-        currentTheme: "auto",
+        https: false,
+        network: false,
+        password: false,
+        themes: {
+            light: [
+                "#fff",
+                "#eee",
+                "#cdcdcd",
+                "#b8b8b8",
+                "#000",
+                "#90cbff",
+                "#f00",
+            ],
+            dark: [
+                "#000",
+                "#1d1d1d",
+                "#323232",
+                "#474747",
+                "#fff",
+                "#0e7dde",
+                "#ff3d3d",
+            ],
+        },
     };
     writeFile("./settings.json", JSON.stringify(settings));
 }
-// I need to finalize settings options before writing to file
-*/
+
+const proxy = createProxyServer();
+
+app.use("/ollama", (req, res) => {
+    proxy.web(req, res, { target: `http://127.0.0.1:${settings.ollamaPort}` });
+});
 
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb" }));
@@ -191,7 +215,7 @@ app.get("/api/update", async (req, res) => {
     process.exit();
 });
 
-app.get("/api/getsettings", async (req, res) => {
+app.post("/api/getsettings", async (req, res) => {
     res.send(JSON.stringify(settings));
 });
 
@@ -208,6 +232,28 @@ app.post("/api/changesettings", (req, res) => {
     }
 });
 
-app.listen(port, () => {
-    console.log(`AwesomeChat running on http://127.0.0.1:${port}`);
-});
+var host = "127.0.0.1";
+if (settings.network) {
+    host = undefined;
+}
+
+if (settings.https) {
+    const options = {
+        key: fs.readFileSync("./certificate/key.pem"),
+        cert: fs.readFileSync("./certificate/cert.pem"),
+    };
+
+    const server = https.createServer(options, app);
+
+    server.listen(settings.chatPort, host, () => {
+        console.log(
+            `AwesomeChat running on https://127.0.0.1:${settings.chatPort}`,
+        );
+    });
+} else {
+    app.listen(settings.chatPort, host, () => {
+        console.log(
+            `AwesomeChat running on http://127.0.0.1:${settings.chatPort}`,
+        );
+    });
+}

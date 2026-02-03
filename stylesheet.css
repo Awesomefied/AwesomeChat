@@ -5,7 +5,10 @@ body {
     display: flex;
     justify-content: center;
     height: 100vh;
+    width: 100vw;
     color: var(--c6);
+    overflow: hidden;
+    position: fixed;
 }
 #sidebar {
     background-color: var(--c2);
@@ -207,6 +210,9 @@ body {
     flex-direction: column-reverse;
     text-wrap: nowrap;
     max-width: -moz-available;
+    max-height: calc(100vh - 141px);
+    overflow: scroll;
+    z-index: 2;
 }
 .modelselectlistinfo {
     padding: 3px;
@@ -257,6 +263,7 @@ body {
     cursor: pointer;
     display: flex;
     font-size: 12px;
+    text-align: center;
 }
 .chatinfo > div:hover {
     background-color: var(--c3);
@@ -276,12 +283,12 @@ body {
     align-items: center;
     backdrop-filter: blur(5px);
     background-color: var(--c3);
-    z-index: 2;
+    z-index: 3;
     flex-direction: column;
 }
 #fileselect {
     position: absolute;
-    z-index: 2;
+    z-index: 3;
     width: 100%;
     height: 100%;
     opacity: 0;
@@ -371,11 +378,15 @@ a {
 p {
     margin: 0;
 }
-think {
+details {
     display: block;
     border: solid 1px var(--c5);
     padding: 5px;
+    margin-bottom: 5px;
     border-radius: 5px;
+}
+summary {
+    cursor: pointer;
 }
 .loading {
     opacity: 1;
@@ -399,7 +410,7 @@ think {
     box-shadow: 0px 0px 5px var(--c5);
     font-size: 14px;
     cursor: pointer;
-    z-index: 2;
+    z-index: 3;
 }
 #chatinfodiv > div {
     padding: 10px;
@@ -428,7 +439,7 @@ think {
     width: 100%;
     height: 100%;
     backdrop-filter: blur(3px);
-    z-index: 3;
+    z-index: 4;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -448,6 +459,8 @@ think {
     background-color: var(--c2);
     border-top-left-radius: 10px;
     border-bottom-left-radius: 10px;
+    display: flex;
+    flex-direction: column;
 }
 #settingsbar > div {
     cursor: pointer;
@@ -459,9 +472,16 @@ think {
 #settingsbar > div:hover {
     background-color: var(--c4);
 }
+#savesettingsbttn {
+    background-color: var(--c5);
+    opacity: 0.5;
+    margin-top: auto;
+    cursor: not-allowed;
+}
 #settingsmain {
     width: 100%;
     height: 100%;
+    overflow: scroll;
 }
 #settingsexit {
     width: 30px;
@@ -485,6 +505,132 @@ think {
     border-radius: 3px;
     transform: rotate(45deg);
 }
+.settingsoption {
+    display: flex;
+    align-items: center;
+    margin: 10px;
+}
+.togglebttn {
+    height: 20px;
+    width: 40px;
+    background-color: var(--c2);
+    margin-left: 10px;
+    border: 2px solid var(--c5);
+    border-radius: 20px;
+    cursor: pointer;
+}
+.togglebttn > div {
+    height: 20px;
+    width: 20px;
+    background-color: var(--c6);
+    border-radius: 50%;
+}
+.settingsinput {
+    width: 89px;
+    resize: none;
+    border: 2px solid var(--c5);
+    border-radius: 5px;
+    background-color: var(--c2);
+    color: var(--c6);
+    margin-left: 10px;
+    font-family: "Lucida Console", monospace;
+}
+#sttngs_themes {
+    max-width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 10px;
+    padding-top: 10px;
+    padding-top: 0px;
+}
+#sttngs_themes > div {
+    width: auto;
+    border: solid 2px var(--c5);
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.themebuildcolordiv {
+    width: 20px;
+    height: 20px;
+    margin-right: 10px;
+    margin-left: 0px;
+    cursor: pointer;
+}
+#themebuilderprev {
+    margin-bottom: 10px;
+    border-radius: 5px;
+    overflow: hidden;
+    border: solid 2px var(--c5);
+    width: 100%;
+}
+#tbcolorpicker {
+    height: 100%;
+    width: 100%;
+    border-radius: 5px;
+    border: solid 2px var(--c5);
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--c2);
+    overflow: clip;
+}
+#tbcolorpickdisp {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    border-bottom: solid 2px var(--c5);
+}
+#tbcolorpickdisp > canvas {
+    cursor: pointer;
+}
+#tbcolorpickslider {
+    background: linear-gradient(
+        to right,
+        hsl(0, 100%, 50%),
+        hsl(60, 100%, 50%),
+        hsl(120, 100%, 50%),
+        hsl(180, 100%, 50%),
+        hsl(240, 100%, 50%),
+        hsl(300, 100%, 50%),
+        hsl(360, 100%, 50%)
+    );
+    height: 5px;
+    margin: 10px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+}
+#tbcolorpickslider > div {
+    height: 15px;
+    width: 15px;
+    background-color: var(--c2);
+    border-radius: 50%;
+    border: solid 3px var(--c4);
+    position: relative;
+    left: -9px;
+    cursor: pointer;
+}
+#tbcolorpickname {
+    text-align: center;
+    margin-bottom: 4px;
+}
+.sttngsthemetitle {
+    background-color: var(--c5);
+    width: 100%;
+    text-align: center;
+}
+.sttngsthemepreview {
+    height: 100%;
+    width: 100%;
+    border-top-left-radius: 2px;
+    border-top-right-radius: 2px;
+    overflow: clip;
+    display: flex;
+    font-size: 6px;
+}
 #modelchangelist {
     position: absolute;
     background-color: var(--c1);
@@ -503,7 +649,7 @@ think {
 }
 #errorsdiv {
     position: absolute;
-    z-index: 4;
+    z-index: 5;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -567,7 +713,7 @@ think {
     cursor: pointer;
 }
 #updatediv {
-    z-index: 3;
+    z-index: 4;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -607,4 +753,8 @@ think {
     border-radius: 5px;
     margin: 5px;
     cursor: pointer;
+}
+#chatsnow {
+    display: flex;
+    flex-direction: column-reverse;
 }
