@@ -136,10 +136,14 @@ dist
 .pnp.*
 
 # DS store
-./DS_Store
+.DS_Store
 
 # Auto generated files
 /chats/*
 
 # User settings
 settings.json
+
+# HTTPS Certs
+/certificate/cert.pem
+/certificate/key.pem
