@@ -213,7 +213,7 @@ async function generate(model, id, current) {
                                     chats[current].messages[
                                         chats[current].messages.length - 1
                                     ].thinking +
-                                    "\n\n</details>\n" +
+                                    "\n\n</details>\n\n" +
                                     chats[current].messages[
                                         chats[current].messages.length - 1
                                     ].content,
@@ -1032,7 +1032,7 @@ function selectChat(id) {
                     div.innerHTML = format(
                         "<details><summary>Thinking</summary>\n\n" +
                             chat.thinking +
-                            "\n\n</details>\n" +
+                            "\n\n</details>\n\n" +
                             chat.content,
                     );
                 } else {
@@ -1463,13 +1463,16 @@ async function sendHTML(html) {
     }
 }
 
-var cmdPressed = false;
-
+var cmdPressed = [false, false];
+// Meta is Command on Mac but Windows key on Windows
 document.addEventListener("keydown", function (event) {
     if (event.key == "Meta") {
-        cmdPressed = true;
+        cmdPressed[0] = true;
+    } else if (event.key == "Control") {
+        cmdPressed[1] = true;
     } else if (event.key == "Enter") {
-        if (cmdPressed) {
+        // Check if focused on text input?
+        if (cmdPressed[0] || cmdPressed[1]) {
             send();
         } else {
             changeChatTitle();
@@ -1479,7 +1482,9 @@ document.addEventListener("keydown", function (event) {
 
 document.addEventListener("keyup", function (event) {
     if (event.key == "Meta") {
-        cmdPressed = false;
+        cmdPressed[0] = false;
+    } else if (event.key == "Control") {
+        cmdPressed[1] = false;
     }
 });
 

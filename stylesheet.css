@@ -1,3 +1,6 @@
+::-webkit-scrollbar-button {
+    display: none;
+}
 body {
     background-color: var(--c1);
     font-family: "Lucida Console", monospace;
@@ -9,6 +12,8 @@ body {
     color: var(--c6);
     overflow: hidden;
     position: fixed;
+    scrollbar-width: thin;
+    scrollbar-color: var(--c3) rgba(0, 0, 0, 0);
 }
 #sidebar {
     background-color: var(--c2);
