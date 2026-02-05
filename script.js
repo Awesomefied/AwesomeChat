@@ -285,7 +285,7 @@ Begin immediately after this line:
 ${chats[id].messages[0].content.slice(0, 500)}`,
         stream: false,
     };
-    if (models[model].capabilities.indexOf("thinking") != -1) {
+    if (models[titleModel].capabilities.indexOf("thinking") != -1) {
         body.think = false;
     }
     try {
