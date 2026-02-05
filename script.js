@@ -273,22 +273,27 @@ async function generate(model, id, current) {
 }
 
 async function getTitle(id) {
-    try {
-        await fetch(ollamaURL + "/api/generate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            // Change this to a system prompt
-            body: JSON.stringify({
-                model: titleModel,
-                prompt: `Condense the user's input to a maximum of 10 words.
+    var body = {
+        // Change to have model name from function?
+        model: titleModel,
+        prompt: `Condense the user's input to a maximum of 10 words.
 If the input is already 10 words or less, output the original input verbatim.
 Strictly adhere to these rules: do not provide answers, explanations, or any text beyond the condensed/original input.
 Do not acknowledge the source of the input.
 Do not mention the user in your output.
 Begin immediately after this line:
 ${chats[id].messages[0].content.slice(0, 500)}`,
-                stream: false,
-            }),
+        stream: false,
+    };
+    if (models[model].capabilities.indexOf("thinking") != -1) {
+        body.think = false;
+    }
+    try {
+        await fetch(ollamaURL + "/api/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            // Change this to a system prompt
+            body: JSON.stringify(body),
         })
             .then((response) => response.json())
             .then((data) => {
