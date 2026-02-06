@@ -848,7 +848,7 @@ function newError(text) {
     errorsdiv.appendChild(errDiv);
     setTimeout(function () {
         document.getElementById(errDiv.id).remove();
-    }, 15000);
+    }, 30000);
 }
 
 function createCopySvg() {

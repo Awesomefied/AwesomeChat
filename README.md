@@ -21,6 +21,7 @@ AwesomeChat is a web interface to interact with AI models using Ollama. The foll
 - **File Upload**: Send text files and images (vision supported models only) for processing
 - **Chat Titles**: Automatically generated titles (currently uses smallest model available)
 - **Automatic Updates**: AwesomeChat Will Automatically check for updates when opened (does not install updates without user input)
+- **Settings**: A user interface to configure various options, such as theme and auto updates
 
 **Known Bugs**
 
@@ -37,17 +38,34 @@ git clone https://github.com/Awesomefied/AwesomeChat
 cd AwesomeChat
 ```
 
-2. Ensure Ollama is running on your system
+2. Install [Ollama](https://ollama.com/download)
 
-`ollama list`
+3. Install [Node JS](https://nodejs.org/en/download)
 
-3. Install the [required libraries](./requirements.txt)
+4. Run the start script
 
-`npm install`
+> Or run these commands:
 
-4. Run the server
+```bash
+# To make sure that Ollama is running
+ollama list
+# Installs required libraries (express, http-proxy)
+npm install
+# Runs the server
+node server.js
+```
 
-`node server.js`
+# Linux / MacOS
+
+```
+./start.sh
+```
+
+# Windows
+
+```
+./start.bat
+```
 
 5. Open `http://127.0.0.1:3000` in your web browser
 
@@ -55,7 +73,6 @@ cd AwesomeChat
 
 The following features are planned but not yet implemented:
 
-- **Settings**: A user interface to configure various options, such as theme and auto updates
 - **Custom Themes**: Users can select from a range of themes or create their own
 - **Tool Calls**: Allow models to execute specific tools or functions within the chat interface
 - **Code Blocks (Syntax Highlighting & Execution)**: Test and edit code written by AI directly from the chat interface.
