@@ -101,9 +101,21 @@ window.addEventListener("paste", async (event) => {
     uploadFiles();
 });
 
-function format(text) {
-    // Temporary, should make own parser?
-    return marked.parse(text);
+async function format(text) {
+    //return marked.parse(text);
+    text = text.replace(/(?<!\$)\$\s*([^$]+?)\s*\$(?!\$)/g, "$$$1$");
+    const result = await convert(
+        {
+            from: "commonmark_x+tex_math_gfm",
+
+            to: "html5+raw_tex+tex_math_dollars+tex_math_double_backslash+tex_math_single_backslash",
+
+            "html-math-method": "mathjax",
+            standalone: false,
+        },
+        text,
+    );
+    return result.stdout;
 }
 
 async function generate(model, id, current) {
@@ -208,28 +220,32 @@ async function generate(model, id, current) {
                                 ].thinking,
                             );
                             */
-                            document.getElementById(id).innerHTML = format(
-                                "<details open=''><summary>Thinking</summary>\n\n" +
-                                    chats[current].messages[
-                                        chats[current].messages.length - 1
-                                    ].thinking +
-                                    "\n\n</details>\n\n" +
+                            document.getElementById(id).innerHTML =
+                                await format(
+                                    "<details open=''><summary>Thinking</summary>\n\n" +
+                                        chats[current].messages[
+                                            chats[current].messages.length - 1
+                                        ].thinking +
+                                        "\n\n</details>\n\n" +
+                                        chats[current].messages[
+                                            chats[current].messages.length - 1
+                                        ].content,
+                                );
+                        } else {
+                            document.getElementById(id).innerHTML =
+                                await format(
                                     chats[current].messages[
                                         chats[current].messages.length - 1
                                     ].content,
-                            );
-                        } else {
-                            document.getElementById(id).innerHTML = format(
-                                chats[current].messages[
-                                    chats[current].messages.length - 1
-                                ].content,
-                            );
+                                );
                         }
 
                         if (scrolledDown) {
                             chatarea.scrollTop =
                                 chatarea.scrollHeight - chatarea.offsetHeight;
                         }
+                        // For Latex Rendering
+                        MathJax.typeset();
                     }
                 }
             } catch (error) {
@@ -259,9 +275,12 @@ async function generate(model, id, current) {
                 ].content += dataJson.response;
                 if (document.getElementById(id)) {
                     // innerHTML bad here too!!!
-                    document.getElementById(id).innerHTML += format(message);
+                    document.getElementById(id).innerHTML +=
+                        await format(message);
                 }
             }
+            // For Latex Rendering
+            MathJax.typeset();
         }
     } catch (error) {
         document.getElementById(id).innerHTML = "";
@@ -273,6 +292,11 @@ async function generate(model, id, current) {
 }
 
 async function getTitle(id) {
+    // Check if auto generated titles is off
+    if (chats[id].messages[0].content == "") {
+        setTitle(id, "Untitled Chat");
+        return;
+    }
     var body = {
         // Change to have model name from function?
         model: titleModel,
@@ -941,7 +965,7 @@ function createEditSvg() {
     return svg;
 }
 
-function selectChat(id) {
+async function selectChat(id) {
     if (activeChat == id) {
         return;
     }
@@ -1029,14 +1053,14 @@ function selectChat(id) {
                 div.appendChild(ldiv);
             } else {
                 if (chat.thinking) {
-                    div.innerHTML = format(
+                    div.innerHTML = await format(
                         "<details><summary>Thinking</summary>\n\n" +
                             chat.thinking +
                             "\n\n</details>\n\n" +
                             chat.content,
                     );
                 } else {
-                    div.innerHTML = format(chat.content);
+                    div.innerHTML = await format(chat.content);
                 }
             }
         }
@@ -1089,6 +1113,8 @@ function selectChat(id) {
         chatarea.appendChild(infodiv);
     }
     chatarea.scrollTop = chatarea.scrollHeight - chatarea.offsetHeight;
+    // For Latex Rendering
+    MathJax.typeset();
 }
 
 function stopClick() {
@@ -1301,6 +1327,12 @@ function toggleSwitch(self) {
     settingsChange(self);
 }
 
+document.addEventListener("mousedown", function (event) {
+    if (event.target.id == "settingsbg") {
+        settingsbg.style.display = "none";
+    }
+});
+
 document.addEventListener("click", function (event) {
     var id = event.target.id;
     var pid = event.target.parentNode.id;
@@ -1314,9 +1346,6 @@ document.addEventListener("click", function (event) {
     }
     if (event.target.className != "chatselectinfo") {
         chatinfodiv.style.display = "none";
-    }
-    if (id == "settingsbg") {
-        settingsbg.style.display = "none";
     }
     if (
         document.getElementById("renameinput") &&
