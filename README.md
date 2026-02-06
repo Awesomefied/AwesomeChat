@@ -5,7 +5,8 @@ Web UI for Ollama
 
 **Note**: To send a message, press `Cmd+Enter` (`Ctrl+Enter` on Windows).
 
-AwesomeChat is early in development and some features are still missing. Please report any bugs or issues that occur.
+> [!WARNING]
+> AwesomeChat is early in development and some features are still missing. Please report any bugs or issues that occur.
 
 **Features**
 
@@ -24,7 +25,6 @@ AwesomeChat is a web interface to interact with AI models using Ollama. The foll
 **Known Bugs**
 
 - Text selection is not possible when an AI is currently generating text
-- Markdown parsing issues due to library being currently used ([Marked](https://marked.js.org/))
 
 **Getting Started**
 
@@ -41,9 +41,9 @@ cd AwesomeChat
 
 `ollama list`
 
-3. Install [Express.js](https://expressjs.com/)
+3. Install the [required libraries](./requirements.txt)
 
-`npm install express`
+`npm install`
 
 4. Run the server
 
