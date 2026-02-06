@@ -119,6 +119,7 @@
                     <div
                         id="savesettingsbttn"
                         style="margin-top: auto; cursor: not-allowed"
+                        onclick="updateSettings()"
                     >
                         Save Settings
                     </div>
@@ -270,6 +271,7 @@
                                     <input
                                         id="themebuildername"
                                         class="settingsinput"
+                                        oninput="themeBuildEdit()"
                                     >
                                     </input>
                                 </div>
@@ -309,7 +311,7 @@
                                     <input class="settingsinput" oninput="themeBuildEdit(this)"/>
                                 </div>
                                 <div class="settingsoption">
-                                    <div style="background-color: var(--c7);padding: 10px;border-radius: 5px;cursor: pointer;">Save Theme</div>
+                                    <div id="savethemebttn" onclick="updateTheme()">Save Theme</div>
                                 </div>
                             </div>
                             <div style="margin-right: 10px;width: 100%;">

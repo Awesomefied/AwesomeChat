@@ -558,6 +558,18 @@ summary {
     flex-direction: column;
     align-items: center;
 }
+#savethemebttn {
+    /*
+    background-color: var(--c7);
+    opacity: 1;
+    cursor: pointer;
+    */
+    background-color: var(--c5);
+    padding: 10px;
+    border-radius: 5px;
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .themebuildcolordiv {
     width: 20px;
     height: 20px;

@@ -1,4 +1,5 @@
 var models;
+// Add setting to disable title generation
 var titleModel;
 var activeModel;
 var ollamaURL = "./ollama";
@@ -8,8 +9,8 @@ var activeChat = 0;
 var temp = "";
 var generating = false;
 var openChat = true;
+// Save current themes to cookie
 var currentThemes = ["light", "dark"];
-// Save settings to cache!!!
 var settings = {
     chatPort: 3000,
     ollamaPort: 11434,
@@ -1380,14 +1381,38 @@ function toggleSideBar() {
     }
 }
 
+function updateCookie(model, themes) {
+    const d = new Date();
+    d.setTime(d.getTime() + 31536000000); // 1 year
+    document.cookie =
+        "lastModel=;expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/";
+    document.cookie =
+        "currentThemes=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
+
+    document.cookie = `lastModel=${model};expires=${d.toUTCString()};path=/`;
+
+    document.cookie = `currentThemes=${btoa(JSON.stringify(themes)).replaceAll("=", "")};expires=${d.toUTCString()};path=/`;
+}
+
+function getCookie() {
+    var cookie = document.cookie.replaceAll(" ", "").split(";");
+    if (cookie.length < 2) {
+        return false;
+    }
+    cookie.shift();
+    cookie.shift();
+    var cookieJSON = {};
+    for (let i = 0; i < cookie.length; i++) {
+        cookie[i] = cookie[i].split("=");
+        cookieJSON[cookie[i][0]] = cookie[i][1];
+    }
+    return cookieJSON;
+}
+
 function selectModel(name) {
     activeModel = name;
     modelname.innerText = name;
-    const d = new Date();
-    d.setTime(d.getTime() + 31536000000); // 1 year
-    document.cookie = "lastModel=;expires=Thu, 01 Jan 1970 00:00:00 UTC;path=/";
-    document.cookie =
-        "lastModel=" + name + ";expires=" + d.toUTCString() + ";path=/";
+    updateCookie(name, currentThemes);
     if (models[name].capabilities.includes("vision")) {
         fileselectinfo.innerText = "(Text Files and Images Supported)";
     } else {
@@ -1637,6 +1662,23 @@ async function getSettings() {
     }
 }
 
+async function changeSettings(newSettings) {
+    try {
+        var res = await fetch("/api/changesettings", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newSettings),
+        });
+        const json = await res.json();
+        return json;
+    } catch (error) {
+        newError("Change Settings Error: " + error.message);
+        console.error(error.message);
+    }
+}
+
 function loadChatFromURL() {
     const chatId = new URL(window.location.href).searchParams.get("chat");
     if (chatId && chats[chatId]) {
@@ -1649,7 +1691,7 @@ function createPreviewDiv(theme) {
     previewdiv.className = "sttngsthemepreview";
     previewdiv.style.backgroundColor = theme[0];
     previewdiv.style.color = theme[4];
-    // Create purple sidebar
+    // Create sidebar
     var sidebar = document.createElement("div");
     sidebar.style.cssText = `min-width: 59px; background-color: ${theme[1]}; text-align: center;`;
     var h2 = document.createElement("h2");
@@ -1670,7 +1712,7 @@ function createPreviewDiv(theme) {
     sidebar.appendChild(h2);
     sidebar.appendChild(chatList);
     previewdiv.appendChild(sidebar);
-    // Create blue main content
+    // Create main content
     var mainContent = document.createElement("div");
     mainContent.style.cssText =
         "height: 100%; width: 100%; display: flex; align-items: center; flex-direction: column;";
@@ -1704,7 +1746,6 @@ function createPreviewDiv(theme) {
     previewdiv.appendChild(mainContent);
     return previewdiv;
 }
-
 // Create preview for theme editor
 var themeBuildVars = [];
 for (let i = 1; i < 8; i++) {
@@ -1729,15 +1770,69 @@ function themeBuildSelect() {
         tbcdiv.getElementsByTagName("div")[0].style.backgroundColor =
             themeBuildVars[i];
     }
+    themeBuildEdit();
 }
 
 function themeBuildEdit(self) {
-    var i = parseInt(self.parentNode.id.slice(3));
-    themeBuildVars[i - 1] = self.value;
-    changeBuilderTheme(themeBuildVars);
-    self.parentNode.getElementsByTagName("div")[0].style.backgroundColor =
-        self.value;
-    colorPickSelect(i);
+    if (self) {
+        var i = parseInt(self.parentNode.id.slice(3));
+        themeBuildVars[i - 1] = self.value;
+        changeBuilderTheme(themeBuildVars);
+        self.parentNode.getElementsByTagName("div")[0].style.backgroundColor =
+            self.value;
+        colorPickSelect(i);
+    }
+    // Check if themes has changed
+    var offLimitThemes = ["", "light", "dark"];
+    if (offLimitThemes.indexOf(themebuildername.value) == -1) {
+        if (
+            Object.keys(settings.themes).indexOf(themebuildername.value) != -1
+        ) {
+            var changed = false;
+            for (let i = 0; i < 7; i++) {
+                var cVal = document
+                    .getElementById("tbc" + (i + 1))
+                    .getElementsByTagName("input")[0].value;
+                if (
+                    cVal != "" &&
+                    settings.themes[themebuildername.value][i] != cVal
+                ) {
+                    changed = true;
+                    break;
+                }
+            }
+            if (!changed) {
+                savethemebttn.style = "";
+                return;
+            }
+        }
+        savethemebttn.style.backgroundColor = "var(--c7)";
+        savethemebttn.style.opacity = "1";
+        savethemebttn.style.cursor = "pointer";
+    } else {
+        savethemebttn.style = "";
+    }
+}
+
+async function updateTheme() {
+    if (savethemebttn.style.length == 0) {
+        return;
+    }
+    var offLimitThemes = ["", "light", "dark"];
+    if (!offLimitThemes.indexOf(themebuildername.value) == -1) {
+        console.log("Offlimits");
+        return;
+    }
+    settings.themes[themebuildername.value] = themeBuildVars;
+    var res = await changeSettings(settings);
+    if (res) {
+        savethemebttn.style = "";
+        updateSettingsMenu();
+        autoTheme();
+    } else {
+        //settings = await getSettings();
+        newError("Failed to Update Theme");
+    }
 }
 
 function componentToHex(c) {
@@ -2000,11 +2095,58 @@ function settingsChange(self) {
     } else {
         var notChanged = true;
         // Loop through all settings to check if they are the same
+        var keys = Object.keys(settings);
+        for (let i = 0; i < keys.length; i++) {
+            if (keys[i] != "themes" && keys[i] != self.id.split("_")[1]) {
+                var cSttng = document.getElementById("sttngs_" + keys[i]);
+                var cVal = cSttng.value;
+                if (cSttng.tagName != "INPUT" && cSttng.tagName != "SELECT") {
+                    cVal = cSttng.attributes.value.value;
+                }
+                if (JSON.stringify(settings[keys[i]]) != cVal) {
+                    notChanged = false;
+                }
+            }
+        }
         if (notChanged) {
             savesettingsbttn.style.cursor = "not-allowed";
             savesettingsbttn.style.backgroundColor = "";
             savesettingsbttn.style.opacity = "";
         }
+    }
+}
+
+async function updateSettings() {
+    if (savesettingsbttn.style.backgroundColor == "") {
+        return;
+    }
+    var keys = Object.keys(settings);
+    for (let i = 0; i < keys.length; i++) {
+        if (keys[i] != "themes") {
+            var cSttng = document.getElementById("sttngs_" + keys[i]);
+            var cVal = cSttng.value;
+            if (cSttng.tagName != "INPUT" && cSttng.tagName != "SELECT") {
+                cVal = cSttng.attributes.value.value;
+            }
+            if (JSON.stringify(settings[keys[i]]) != cVal) {
+                settings[keys[i]] = JSON.parse(cVal);
+            }
+        }
+    }
+    if (
+        lightmodeselect.value != currentThemes[0] ||
+        darkmodeselect.value != currentThemes[1]
+    ) {
+        currentThemes = [lightmodeselect.value, darkmodeselect.value];
+        autoTheme();
+        updateCookie(activeModel, currentThemes);
+    }
+    var res = await changeSettings(settings);
+    if (res) {
+        savesettingsbttn.style.backgroundColor = "";
+    } else {
+        //settings = await getSettings();
+        newError("Failed to Update Settings");
     }
 }
 
@@ -2062,6 +2204,19 @@ function updateSettingsMenu() {
 
 async function start() {
     settings = await getSettings();
+    var cookie = getCookie();
+    if (cookie && cookie.currentThemes) {
+        cookie.currentThemes = JSON.parse(atob(cookie.currentThemes));
+        for (let i = 0; i < 2; i++) {
+            if (
+                Object.keys(settings.themes).indexOf(cookie.currentThemes[i]) !=
+                -1
+            ) {
+                currentThemes[i] = cookie.currentThemes[i];
+            }
+        }
+    }
+    autoTheme();
     if (
         (window.location.hostname == "127.0.0.1" ||
             window.location.hostname == "localhost") &&
@@ -2196,11 +2351,8 @@ async function start() {
         }
         modelselectlist.appendChild(mdiv);
     }
-    var lastModel = document.cookie
-        .slice(document.cookie.indexOf("lastModel="))
-        .split("=")[1];
-    if (document.cookie != "" && Object.keys(models).indexOf(lastModel) != -1) {
-        selectModel(lastModel);
+    if (cookie && Object.keys(models).indexOf(cookie.lastModel) != -1) {
+        selectModel(cookie.lastModel);
     } else {
         selectModel(Object.keys(models)[0]);
     }

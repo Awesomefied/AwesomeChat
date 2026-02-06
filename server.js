@@ -221,11 +221,27 @@ app.post("/api/getsettings", async (req, res) => {
 
 app.post("/api/changesettings", (req, res) => {
     try {
-        if (JSON.parse(req.body)) {
-            settings = JSON.parse(req.body);
-            res.send(true);
+        var changed = false;
+        if (req.body) {
+            // Verify themes && better setting validation
+            var newSttngs = req.body;
+            var newKeys = Object.keys(newSttngs);
+            var keys = Object.keys(settings);
+            for (let i = 0; i < newKeys.length; i++) {
+                // if key == themes then check all themes?
+                if (
+                    keys.indexOf(newKeys[i]) != -1 &&
+                    typeof newSttngs[newKeys[i]] == typeof settings[newKeys[i]]
+                ) {
+                    settings[newKeys[i]] = newSttngs[newKeys[i]];
+                    changed = true;
+                }
+            }
+            if (changed) {
+                writeFile("./settings.json", JSON.stringify(settings));
+            }
         }
-        res.send(false);
+        res.send(changed);
     } catch (err) {
         console.error(err);
         res.send(false);
