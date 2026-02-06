@@ -103,11 +103,11 @@ window.addEventListener("paste", async (event) => {
 });
 
 async function format(text) {
-    //return marked.parse(text);
+    // For LaTex formating ($\frac{6}{7}$ -> $ \frac{6}{7} $)
     text = text.replace(/(?<!\$)\$\s*([^$]+?)\s*\$(?!\$)/g, "$$$1$");
     const result = await convert(
         {
-            from: "commonmark_x+tex_math_gfm",
+            from: "commonmark_x+tex_math_gfm-raw_html",
 
             to: "html5+raw_tex+tex_math_dollars+tex_math_double_backslash+tex_math_single_backslash",
 
@@ -1401,8 +1401,6 @@ function getCookie() {
     if (cookie.length < 2) {
         return false;
     }
-    cookie.shift();
-    cookie.shift();
     var cookieJSON = {};
     for (let i = 0; i < cookie.length; i++) {
         cookie[i] = cookie[i].split("=");
