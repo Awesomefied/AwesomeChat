@@ -1303,8 +1303,9 @@ function toggleList() {
     }
 }
 
-function toggleSwitch(self) {
-    if (self.style.length != 0) {
+function toggleSwitch(self, mode) {
+    if (self.style.length != 0 || mode == "off") {
+        // Turn off
         self.style = "";
         self.children[0].style = "";
         self.setAttribute("value", "false");
@@ -1313,6 +1314,7 @@ function toggleSwitch(self) {
             createpass.style.display = "none";
         }
     } else {
+        // Turn on
         self.style.backgroundColor = "var(--c7)";
         self.style.border = "2px solid var(--c7)";
         self.children[0].style.marginLeft = "20px";
@@ -2155,7 +2157,7 @@ function updateSettingsMenu() {
     for (let i = 0; i < keys.length; i++) {
         sttng = settings[keys[i]];
         if (sttng == true) {
-            toggleSwitch(document.getElementById("sttngs_" + keys[i]));
+            toggleSwitch(document.getElementById("sttngs_" + keys[i]), "on");
         } else if (typeof sttng != "object") {
             document.getElementById("sttngs_" + keys[i]).value = sttng;
         }
