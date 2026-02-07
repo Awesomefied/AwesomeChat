@@ -40,6 +40,11 @@ cd AwesomeChat
 
 2. Install [Ollama](https://ollama.com/download)
 
+> [!NOTE]
+> Make sure you have at least one model downloaded through the terminal before starting AwesomeChat
+> Example: `ollama pull qwen3:0.6b`
+> Having a small model (less than 3b params) is recommended as it is used to generate titles
+
 3. Install [Node JS](https://nodejs.org/en/download)
 
 4. Run the start script
