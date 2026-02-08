@@ -547,13 +547,11 @@ async function redoChat(id, index) {
         return;
     }
     for (let i = (index - 1) / 2 + 1; i < chats[id].messages.length / 2; i++) {
-        if (document.getElementById("imgs" + activeChat + "_" + i)) {
-            document.getElementById("imgs" + activeChat + "_" + i).remove();
-        }
-        document.getElementById("user" + activeChat + "_" + i).remove();
-        document.getElementById("ai" + activeChat + "_" + i).remove();
-        document.getElementById("info" + activeChat + "_" + i).remove();
-        document.getElementById("userinfo" + activeChat + "_" + i).remove();
+        removeElement("imgs" + activeChat + "_" + i);
+        removeElement("user" + activeChat + "_" + i);
+        removeElement("ai" + activeChat + "_" + i);
+        removeElement("info" + activeChat + "_" + i);
+        removeElement("userinfo" + activeChat + "_" + i);
         chatIndex--;
     }
     chats[id].messages = chats[id].messages.slice(0, index);
@@ -613,7 +611,7 @@ function createFileSVG() {
 }
 
 function removeFile(type, num) {
-    document.getElementById(type + num).remove();
+    removeElement(type + num);
     if (type == "img") {
         files.images[Object.keys(files.images)[num]] = false;
     } else {
@@ -795,6 +793,12 @@ function formatBites(num) {
     }
 }
 
+function removeElement(id) {
+    if (document.getElementById(id)) {
+        document.getElementById(id).remove();
+    }
+}
+
 function newChat() {
     history.pushState(null, "", "./");
     if (sidebar.style.zIndex == 2 && sidebar.style.display != "none") {
@@ -802,13 +806,11 @@ function newChat() {
     }
     if (activeChat != 0) {
         for (let i = 0; i < chats[activeChat].messages.length / 2; i++) {
-            if (document.getElementById("imgs" + activeChat + "_" + i)) {
-                document.getElementById("imgs" + activeChat + "_" + i).remove();
-            }
-            document.getElementById("user" + activeChat + "_" + i).remove();
-            document.getElementById("ai" + activeChat + "_" + i).remove();
-            document.getElementById("info" + activeChat + "_" + i).remove();
-            document.getElementById("userinfo" + activeChat + "_" + i).remove();
+            removeElement("imgs" + activeChat + "_" + i);
+            removeElement("user" + activeChat + "_" + i);
+            removeElement("ai" + activeChat + "_" + i);
+            removeElement("info" + activeChat + "_" + i);
+            removeElement("userinfo" + activeChat + "_" + i);
         }
     }
     chatIndex = -1;
@@ -837,7 +839,7 @@ function newError(text) {
     errDiv.appendChild(errName);
     const errClose = document.createElement("div");
     errClose.className = "errorclose";
-    errClose.setAttribute("onclick", `${errDiv.id}.remove()`);
+    errClose.setAttribute("onclick", `removeElement(${errDiv.id})`);
     const errCloseDiv = document.createElement("div");
     errCloseDiv.style.width = "12px";
     errCloseDiv.style.position = "absolute";
@@ -847,7 +849,7 @@ function newError(text) {
     errDiv.appendChild(errClose);
     errorsdiv.appendChild(errDiv);
     setTimeout(function () {
-        document.getElementById(errDiv.id).remove();
+        removeElement(errDiv.id);
     }, 30000);
 }
 
@@ -975,13 +977,11 @@ async function selectChat(id) {
     }
     if (activeChat != 0) {
         for (let i = 0; i < chats[activeChat].messages.length / 2; i++) {
-            if (document.getElementById("imgs" + activeChat + "_" + i)) {
-                document.getElementById("imgs" + activeChat + "_" + i).remove();
-            }
-            document.getElementById("user" + activeChat + "_" + i).remove();
-            document.getElementById("ai" + activeChat + "_" + i).remove();
-            document.getElementById("info" + activeChat + "_" + i).remove();
-            document.getElementById("userinfo" + activeChat + "_" + i).remove();
+            removeElement("imgs" + activeChat + "_" + i);
+            removeElement("user" + activeChat + "_" + i);
+            removeElement("ai" + activeChat + "_" + i);
+            removeElement("info" + activeChat + "_" + i);
+            removeElement("userinfo" + activeChat + "_" + i);
         }
     }
     // Change URL
@@ -1215,7 +1215,7 @@ async function removeChat(id) {
     if (activeChat == id) {
         newChat();
     }
-    document.getElementById("chat" + id).remove();
+    removeElement("chat" + id);
     delete chats[id];
 }
 
