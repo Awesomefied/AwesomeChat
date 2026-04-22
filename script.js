@@ -119,7 +119,63 @@ async function format(text) {
     return result.stdout;
 }
 
+var tempElem;
+var currentElem;
+function syncTrees() {
+    // Use a stack to iteratively process the DOM tree (prevents deep recursion issues)
+    let stack = [{ cNode: currentElem, tNode: tempElem }];
+
+    while (stack.length > 0) {
+        let current = stack.pop();
+        let c = current.cNode;
+        let t = current.tNode;
+
+        // Append any new nodes from the temporary tree
+        while (c.childNodes.length < t.childNodes.length) {
+            c.appendChild(t.childNodes[c.childNodes.length].cloneNode(true));
+        }
+
+        // Remove any extra nodes that shouldn't be there
+        while (c.childNodes.length > t.childNodes.length) {
+            c.removeChild(c.lastChild);
+        }
+
+        // Diff the children
+        for (let i = 0; i < c.childNodes.length; i++) {
+            let cChild = c.childNodes[i];
+            let tChild = t.childNodes[i];
+
+            // FAST PATH: If nodes are completely identical, skip them.
+            // This prevents the slowdown by ignoring all the unmodified upper leaves!
+            if (cChild.isEqualNode(tChild)) {
+                continue;
+            }
+
+            if (cChild.nodeType === tChild.nodeType) {
+                if (cChild.nodeType === 3) {
+                    // Text node
+                    cChild.nodeValue = tChild.nodeValue;
+                } else if (
+                    cChild.nodeType === 1 &&
+                    cChild.tagName === tChild.tagName
+                ) {
+                    // Element node
+                    stack.push({ cNode: cChild, tNode: tChild });
+                } else {
+                    c.replaceChild(tChild.cloneNode(true), cChild);
+                }
+            } else {
+                c.replaceChild(tChild.cloneNode(true), cChild);
+            }
+        }
+    }
+}
+
 async function generate(model, id, current) {
+    var thinkswitch = JSON.parse(
+        thinkingselect.getElementsByClassName("togglebttn")[0].attributes.value
+            .value,
+    );
     var bodyJSON = JSON.stringify({
         model,
         messages: chats[current].messages,
@@ -128,13 +184,17 @@ async function generate(model, id, current) {
         bodyJSON = JSON.stringify({
             model,
             messages: chats[current].messages,
-            think: true,
+            think: thinkswitch,
         });
-        chats[current].messages.push({
+        var msgJSON = {
             role: "assistant",
             content: "",
-            thinking: "",
-        });
+        };
+        if (thinkswitch) {
+            msgJSON.thinking = "";
+        }
+        console.log(msgJSON);
+        chats[current].messages.push(msgJSON);
     } else {
         chats[current].messages.push({ role: "assistant", content: "" });
     }
@@ -197,15 +257,23 @@ async function generate(model, id, current) {
                         }
                     }
 
-                    if (document.getElementById(id)) {
-                        // innerHTML bad!! need to make parser that can dynamically add new elements + use innerText instead
-                        // Mostly so that you can highlight items while chat is generating (currently not working D:)
+                    tempElem = document.createElement("div");
+                    currentElem = document.getElementById(id);
+                    if (currentElem) {
+                        if (
+                            //document.getElementById(id).innerText == "Loading model..."
+                            currentElem.children[0].className == "loading"
+                        ) {
+                            currentElem.innerText = "";
+                        }
+                        var newHtml;
                         if (
                             chats[current].messages[
                                 chats[current].messages.length - 1
                             ].thinking
                         ) {
                             /*
+                            // old code
                             if (!document.getElementById(`${id}_thinking`)) {
                                 var thinkDiv = document.createElement("think");
                                 thinkDiv.id = `${id}_thinking`;
@@ -221,32 +289,35 @@ async function generate(model, id, current) {
                                 ].thinking,
                             );
                             */
-                            document.getElementById(id).innerHTML =
-                                await format(
-                                    "<details open=''><summary>Thinking</summary>\n\n" +
-                                        chats[current].messages[
-                                            chats[current].messages.length - 1
-                                        ].thinking +
-                                        "\n\n</details>\n\n" +
-                                        chats[current].messages[
-                                            chats[current].messages.length - 1
-                                        ].content,
-                                );
+
+                            newHtml =
+                                "<details open=''><summary>Thinking</summary>\n\n" +
+                                chats[current].messages[
+                                    chats[current].messages.length - 1
+                                ].thinking +
+                                "\n\n</details>\n\n" +
+                                chats[current].messages[
+                                    chats[current].messages.length - 1
+                                ].content;
                         } else {
-                            document.getElementById(id).innerHTML =
-                                await format(
-                                    chats[current].messages[
-                                        chats[current].messages.length - 1
-                                    ].content,
-                                );
+                            newHtml =
+                                chats[current].messages[
+                                    chats[current].messages.length - 1
+                                ].content;
+                        }
+                        tempElem.innerHTML = await format(newHtml);
+                        syncTrees();
+                        if (!document.hidden) {
+                            // Only parse LaTeX on last element in chat div
+                            MathJax.typeset([
+                                currentElem, //.children[currentElem.children.length - 1],
+                            ]);
                         }
 
                         if (scrolledDown) {
                             chatarea.scrollTop =
                                 chatarea.scrollHeight - chatarea.offsetHeight;
                         }
-                        // For Latex Rendering
-                        MathJax.typeset();
                     }
                 }
             } catch (error) {
@@ -254,17 +325,12 @@ async function generate(model, id, current) {
                 console.error(error.message);
             }
         }
+        MathJax.typeset([document.getElementById(id)]);
         document.getElementById("name" + current).className = "chatselecttext";
-        // Change if statment cause model could just say "Loading model...", rare but possible
-        if (
-            document.getElementById(id) &&
-            document.getElementById(id).innerText == "Loading model..."
-        ) {
-            document.getElementById(id).innerText = "";
-        }
         saveChat(current);
         stopGen = false;
         generating = false;
+        newNotification("Chat Finished Generating", "");
         // Process the data once it's fully received (I think that I can remove this but idk)
         if (data) {
             const splitData = data.split("}");
@@ -275,13 +341,12 @@ async function generate(model, id, current) {
                     chats[current].messages.length - 1
                 ].content += dataJson.response;
                 if (document.getElementById(id)) {
-                    // innerHTML bad here too!!!
                     document.getElementById(id).innerHTML +=
                         await format(message);
                 }
             }
             // For Latex Rendering
-            MathJax.typeset();
+            MathJax.typeset([document.getElementById(id)]);
         }
     } catch (error) {
         document.getElementById(id).innerHTML = "";
@@ -801,7 +866,7 @@ function removeElement(id) {
 
 function newChat() {
     history.pushState(null, "", "./");
-    if (sidebar.style.zIndex == 2 && sidebar.style.display != "none") {
+    if (sidebar.style.zIndex == 3 && sidebar.style.display != "none") {
         toggleSideBar();
     }
     if (activeChat != 0) {
@@ -818,7 +883,7 @@ function newChat() {
     activeChat = 0;
     textbox.value = temp;
     resizeInput();
-    if (sidebar.style.zIndex != 2) {
+    if (sidebar.style.zIndex != 3) {
         textbox.focus();
     }
     var allChats = document.getElementsByClassName("chatselect");
@@ -828,9 +893,15 @@ function newChat() {
             "chatselectinfo",
         )[0].style.background = "";
     }
+    if (models[activeModel].capabilities.indexOf("thinking") != -1) {
+        thinkingselect.style.display = "";
+    } else {
+        thinkingselect.style.display = "none";
+    }
 }
 
 function newError(text) {
+    newNotification(text, "");
     console.log(text);
     const errDiv = document.createElement("div");
     errDiv.id = "error" + errorsdiv.children.length;
@@ -972,7 +1043,7 @@ async function selectChat(id) {
     if (activeChat == id) {
         return;
     }
-    if (sidebar.style.zIndex == 2 && sidebar.style.display != "none") {
+    if (sidebar.style.zIndex == 3 && sidebar.style.display != "none") {
         toggleSideBar();
     }
     if (activeChat != 0) {
@@ -991,7 +1062,7 @@ async function selectChat(id) {
     activeChat = id;
     textbox.value = chats[activeChat].temp;
     resizeInput();
-    if (sidebar.style.zIndex != 2) {
+    if (sidebar.style.zIndex != 3) {
         textbox.focus();
     }
     const lastModel =
@@ -1064,6 +1135,7 @@ async function selectChat(id) {
                     div.innerHTML = await format(chat.content);
                 }
             }
+            MathJax.typeset([div]);
         }
         chatarea.appendChild(div);
         // Chat info
@@ -1114,8 +1186,11 @@ async function selectChat(id) {
         chatarea.appendChild(infodiv);
     }
     chatarea.scrollTop = chatarea.scrollHeight - chatarea.offsetHeight;
-    // For Latex Rendering
-    MathJax.typeset();
+    if (models[lastModel].capabilities.indexOf("thinking") != -1) {
+        thinkingselect.style.display = "";
+    } else {
+        thinkingselect.style.display = "none";
+    }
 }
 
 function stopClick() {
@@ -1460,18 +1535,18 @@ function resizeInput() {
 function mobile() {
     if (
         document.body.offsetWidth < document.body.offsetHeight &&
-        sidebar.style.zIndex != "2"
+        sidebar.style.zIndex != "3"
     ) {
         if (sidebar.style.display != "none") {
             toggleSideBar();
         }
         sidebar.style.position = "absolute";
         sidebar.style.left = "0";
-        sidebar.style.zIndex = "2";
+        sidebar.style.zIndex = "3";
         sidebar.style.boxShadow = "0px 0px 15px var(--c4)";
     } else if (
         document.body.offsetWidth >= document.body.offsetHeight &&
-        sidebar.style.zIndex == "2"
+        sidebar.style.zIndex == "3"
     ) {
         if (sidebar.style.display == "none") {
             toggleSideBar();
@@ -2202,7 +2277,32 @@ function updateSettingsMenu() {
     }
 }
 
+function newNotification(title, body) {
+    if (Notification.permission != "granted" || !document.hidden) {
+        return;
+    }
+    new Notification(title, {
+        body: body,
+        icon: "./images/icon-512x512.png",
+    });
+}
+
+async function requestNotifications() {
+    if (Notification.permission === "granted") {
+        alert("Notifications already enabled");
+        return;
+    }
+    var perms = await Notification.requestPermission();
+    if (perms == "denied") {
+        alert(
+            "Notifications are disabled, configure your browser notification settings for this page",
+        );
+    }
+}
+
 async function start() {
+    // Start thinking switch on true
+    toggleSwitch(thinkingselect.getElementsByClassName("togglebttn")[0]);
     settings = await getSettings();
     var cookie = getCookie();
     if (cookie && cookie.currentThemes) {
@@ -2365,6 +2465,11 @@ async function start() {
     }
     titleModel = last[1];
     loadChatFromURL();
+    if (models[activeModel].capabilities.indexOf("thinking") != -1) {
+        thinkingselect.style.display = "";
+    } else {
+        thinkingselect.style.display = "none";
+    }
     updateSettingsMenu();
     function change() {
         fileselectscreen.style.display = "";

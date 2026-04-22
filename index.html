@@ -226,6 +226,9 @@
                                 <input type="password" class="settingsinput" />
                             </div>
                         </div>
+                        <div class="settingsoption">
+                            <div style="background-color: var(--c7);opacity: 1;cursor: pointer;padding: 10px;border-radius: 5px;" onclick="requestNotifications()">Notification Prefrences</div>
+                        </div>
                         <div style="margin: 10px"><h2>Themes</h2></div>
                         <div class="settingsoption">
                             <b>Current Themes:</b>
@@ -533,6 +536,12 @@
                     </svg>
                 </div>
                 <div style="width: 100%"></div>
+                <div id="thinkingselect" style="display:none;" class="settingsoption">
+                    <div>Thinking:</div>
+                    <div class="togglebttn" onclick="toggleSwitch(this)" value="false" style="">
+                        <div style=""></div>
+                    </div>
+                </div>
                 <div
                     class="chatbttn"
                     id="settingsbttn"
