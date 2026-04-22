@@ -124,33 +124,27 @@ var currentElem;
 function syncTrees() {
     // Use a stack to iteratively process the DOM tree (prevents deep recursion issues)
     let stack = [{ cNode: currentElem, tNode: tempElem }];
-
     while (stack.length > 0) {
         let current = stack.pop();
         let c = current.cNode;
         let t = current.tNode;
-
         // Append any new nodes from the temporary tree
         while (c.childNodes.length < t.childNodes.length) {
             c.appendChild(t.childNodes[c.childNodes.length].cloneNode(true));
         }
-
         // Remove any extra nodes that shouldn't be there
         while (c.childNodes.length > t.childNodes.length) {
             c.removeChild(c.lastChild);
         }
-
         // Diff the children
         for (let i = 0; i < c.childNodes.length; i++) {
             let cChild = c.childNodes[i];
             let tChild = t.childNodes[i];
-
             // FAST PATH: If nodes are completely identical, skip them.
             // This prevents the slowdown by ignoring all the unmodified upper leaves!
             if (cChild.isEqualNode(tChild)) {
                 continue;
             }
-
             if (cChild.nodeType === tChild.nodeType) {
                 if (cChild.nodeType === 3) {
                     // Text node

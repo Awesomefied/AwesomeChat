@@ -1,5 +1,6 @@
-#!/bin/bash
+@echo off
 
 ollama list
-npm install
+call npm install
 node server.js
+pause
